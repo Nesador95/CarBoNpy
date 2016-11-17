@@ -43,7 +43,7 @@ numspecies=len(species) # Total number of chemical species
 
 print(species,numspecies)
 
-exit()
+#exit()
 
 namesa=("input1","input2","output","alpha","beta","gamma")
 namesd=("input1","input2","output1","output2","alpha","beta","gamma")
