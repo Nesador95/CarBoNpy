@@ -66,10 +66,10 @@ def select_editor():
     editor = input("Select an number:\n\n1 for Vim.\n2 for Emacs.\n")
     if editor == "1" or editor == "2":
         if editor == "1":
-            os.system("vim +12 " + title)
+            os.system("vim +12 " + title + "&")
             exit()
         elif editor == "2":
-            os.system("emacs +12 " + title)
+            os.system("emacs +12 " + title + "&")
             exit()
     else:
         os.system("clear")
