@@ -61,8 +61,8 @@ convert = lambda x: int(speciesidx[x]) if x!='' else None
 #Third line replaces NaN with species number zero
 #Fourth line forces index number columns to be integers. 
 
-reactions = pd.read_fwf(reactions_file, header=None, skiprows=1,converters={0:convert,1:convert,2:convert,3:convert,4:convert})
-reactions.columns = pd.read_csv(reactions_file, delim_whitespace=True, nrows=1).columns
+reactions = pd.read_fwf(reactions_file, header=None, skiprows=1,comment='#',converters={0:convert,1:convert,2:convert,3:convert,4:convert})
+reactions.columns = pd.read_csv(reactions_file, delim_whitespace=True,nrows=1).columns
 reactions.fillna(0,inplace=True)
 reactions[['Input1','Input2','Output1','Output2','Output3','Re']] = reactions[['Input1','Input2','Output1','Output2','Output3','Re']].astype(int)
 
@@ -79,9 +79,9 @@ def print_full(x):
     pd.reset_option('display.expand_frame_repr')
 
 print_full(reactions)
-for name,index in speciesidx.items():
-    if index != 0:
-        print(name,index)
+#for name,index in speciesidx.items():
+#    if index != 0:
+#        print(name,index)
 #exit()
 ####
 
@@ -125,10 +125,18 @@ stepnum = 0
 def chemnet(y,t):
     f=np.zeros(numspecies,float)
     # Define Temperature (All data from Cherchneff and Dwek 2009)  
-    t0 = 100/365.25   # 0.273... years is approximately 100 days
-    T0 = 5700         # Temperature at 100 days
-    gamma = 1.593     # "adiabatic" index
-    T=T0*(t/t0)**(3-3*gamma)
+    #t0 = 100/365.25   # 0.273... years is approximately 100 days
+    #T0 = 6000         # Temperature at 100 days (5700 from C&D, 6000 from Yu et al)
+    #gamma = 1.593     # "adiabatic" index
+    #T=T0*(t/t0)**(3-3*gamma)
+    # "Basic temperature model" From Yu et al:
+    T0 = 3.3e+10/3.154e+07
+    t0 = 63.6929/365.25
+    T = T0/t
+    
+    ##Test Code for number density (see Deneault et al 06 and Yu et al 13)
+    Ndensinit = 1.1e+10
+    Ndens = Ndensinit*(t0/t)**3 
 
     for num in range(count):        
         in1=reactions.loc[num,'Input1']
@@ -144,14 +152,14 @@ def chemnet(y,t):
             print('Still going! t={0}, Temp={1}'.format(t,T))
 
         #print(in1,in2,out1,out2,out3,alpha,beta,gamma,fo)
-        #print(arrhenius(alpha,beta,gamma,t,fo))
+        #print(arrhenius(alpha,beta,gamma,t,fo)) 
         if in2 != 0:
-            f[in1] -= arrhenius(alpha,beta,gamma,T,fo)*y[in1]*y[in2]
-            f[in2] -= arrhenius(alpha,beta,gamma,T,fo)*y[in1]*y[in2]
-            f[out1] += arrhenius(alpha,beta,gamma,T,fo)*y[in1]*y[in2] 
-            f[out2] += arrhenius(alpha,beta,gamma,T,fo)*y[in1]*y[in2]
-            f[out3] += arrhenius(alpha,beta,gamma,T,fo)*y[in1]*y[in2]
-        else:
+            f[in1] -= Ndens*arrhenius(alpha,beta,gamma,T,fo)*y[in1]*y[in2]
+            f[in2] -= Ndens*arrhenius(alpha,beta,gamma,T,fo)*y[in1]*y[in2]
+            f[out1] += Ndens*arrhenius(alpha,beta,gamma,T,fo)*y[in1]*y[in2] 
+            f[out2] += Ndens*arrhenius(alpha,beta,gamma,T,fo)*y[in1]*y[in2]
+            f[out3] += Ndens*arrhenius(alpha,beta,gamma,T,fo)*y[in1]*y[in2]
+        elif in2 == 0:
             f[in1] -= arrhenius(alpha,beta,gamma,T,fo)*y[in1]
             f[out1] += arrhenius(alpha,beta,gamma,T,fo)*y[in1] 
             f[out2] += arrhenius(alpha,beta,gamma,T,fo)*y[in1]
@@ -161,15 +169,15 @@ def chemnet(y,t):
 
 
 # Remember that time is measured in units of years.
-time = np.linspace(0.1,5,100000)
+time = np.linspace(60/365.25,5,1000000)
 
 # Initial Values #########################################
 yinit = np.zeros(numspecies)          
-yinit[speciesidx['C']] = 1e10           #Initial Oxygen
-yinit[speciesidx['O']] = 1e10           #Initial Carbon 
+yinit[speciesidx['C']] = 0.1            #Initial Oxygen
+yinit[speciesidx['O']] = 1             #Initial Carbon 
 ##########################################################
 
-y = odeint(chemnet,yinit,time,mxstep=5000000)
+y = odeint(chemnet,yinit,time,mxstep=5000000,rtol=1e-13,atol=1e-13)
 
 ######
 # Plot final abundances
