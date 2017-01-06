@@ -23,14 +23,14 @@ from sys import exit
 # Input Files
 ######
 
-species_file='data/kida_spec_C_O_only.dat'
-reactions_file='data/kida_reac_C_O_only.dat'
+species_file='data/kida_spec_C_O_Si_only.dat'
+reactions_file='data/kida_reac_C_O_Si_only.dat'
 
 ######
 # Output Data File
 ######
 
-output_file='output/kida_output_C_O_only.dat'
+output_file='output/D_2017/CD_Model/output_C1_O0.01_Si1.dat'
 
 #Read species file, create 2 dictionaries 
 #speciesidx relating species name to index 
@@ -89,13 +89,6 @@ print_full(reactions)
 def arrhenius(a,b,c,T,formula):
     a *= 3.154e+7     # Convert units to year**-1
 
-    # Define time dependence - Temperature is set at 100 days. (All data from Cherchneff and Dwek 2009)  
-    #def T(t):
-    #    t0 = 0.273790926  # 0.273... years is approximately 100 days
-    #    T0 = 5700         # Temperature at 100 days
-    #    gamma = 1.593     # "adiabatic" index
-    #    return T0*(t/t0)**(3-3*gamma)
-
     # Formula choosing subroutine (from KIDA data set)
     if formula==1:                    #Cosmic Ray Ionization
         zeta = 2.0e-17                    #H2 ionization rate
@@ -125,17 +118,17 @@ stepnum = 0
 def chemnet(y,t):
     f=np.zeros(numspecies,float)
     # Define Temperature (All data from Cherchneff and Dwek 2009)  
-    #t0 = 100/365.25   # 0.273... years is approximately 100 days
-    #T0 = 6000         # Temperature at 100 days (5700 from C&D, 6000 from Yu et al)
-    #gamma = 1.593     # "adiabatic" index
-    #T=T0*(t/t0)**(3-3*gamma)
+    t0 = 100/365.25   # 0.273... years is approximately 100 days
+    T0 = 1.8e+4       # Temperature at 100 days (1.8e+4 from C&D, 6000 from Yu et al)
+    gamma = 1.593     # "adiabatic" index
+    T=T0*(t/t0)**(3-3*gamma)
     # "Basic temperature model" From Yu et al:
-    T0 = 3.3e+10/3.154e+07
-    t0 = 63.6929/365.25
-    T = T0/t
+    #T0 = 3.3e+10/3.154e+07
+    #t0 = 63.6929/365.25
+    #T = T0/t
     
     ##Test Code for number density (see Deneault et al 06 and Yu et al 13)
-    Ndensinit = 1.1e+10
+    #Ndensinit = 1.1e+10
     Ndens = Ndensinit*(t0/t)**3 
 
     for num in range(count):        
@@ -172,9 +165,11 @@ def chemnet(y,t):
 time = np.linspace(60/365.25,5,1000000)
 
 # Initial Values #########################################
-yinit = np.zeros(numspecies)          
-yinit[speciesidx['C']] = 0.1            #Initial Oxygen
-yinit[speciesidx['O']] = 1             #Initial Carbon 
+yinit = np.zeros(numspecies,float)          
+yinit[speciesidx['C']]  = 1            #Initial Carbon
+yinit[speciesidx['O']]  = 0.01              #Initial Oxygen 
+yinit[speciesidx['Si']] = 1            #Initial Silicon
+Ndensinit = np.sum(yinit)*1e10
 ##########################################################
 
 y = odeint(chemnet,yinit,time,mxstep=5000000,rtol=1e-13,atol=1e-13)
