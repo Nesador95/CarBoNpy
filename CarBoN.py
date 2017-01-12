@@ -8,14 +8,9 @@
 #notes			:See UPDATES
 #python_version		:3.5.2
 #==============================================================================
-# 
-#IMPORTANT:
-#--All KIDA Data Sets Must have a header line included in it, may need to put it in / edit yourself! 
-#--If there are 3 output species, make sure that at least ONE is placed on the first data line. 
-#Please Read data/kida_readme_2016-x-x_1.dat for info
 
 from scipy.integrate import odeint
-import pandas as pd
+from datainput import kida_input,print_full 
 import numpy as np
 from sys import exit
 
@@ -32,57 +27,23 @@ reactions_file='data/kida_reac_C_O_Si_only.dat'
 
 output_file='output/D_2017/CD_Model/output_test.dat'
 
-#Read species file, create 2 dictionaries 
-#speciesidx relating species name to index 
-#speciesmass relating species name to 'mass' 
+######
+# Read data files
+######
 
-speciesidx={}
-speciesmass={}
-with open(species_file,'r') as my_file:
-    for line in my_file:
-        columns = line.strip().split()
-        speciesidx[columns[0]]=int(columns[24])
-        sum=0
-        for i in range(2,24):
-            num = int(columns[i])
-            sum += num
-        speciesmass[columns[0]]=sum 
-
-numspecies=len(speciesidx)+1 # Total number of chemical species + a "catchall" zero. 
-
-#Convert Inputs to Species Number
-#Some inputs are missing (typically Output2 or Output3) Don't change those values. Let Pandas do that. 
-
-convert = lambda x: int(speciesidx[x]) if x!='' else None
-
-#Read the reactions file and replace species names with index numbers from species file.
-#First two lines read the file with properly formatted columns. See: http://stackoverflow.com/questions/40663510/pandas-read-fwf-ignoring-values
-#Make sure that headers are set correctly to cover negative signs!
-#Third line replaces NaN with species number zero
-#Fourth line forces index number columns to be integers. 
-
-reactions = pd.read_fwf(reactions_file, header=None, skiprows=1,comment='#',converters={0:convert,1:convert,2:convert,3:convert,4:convert})
-reactions.columns = pd.read_csv(reactions_file, delim_whitespace=True,nrows=1).columns
-reactions.fillna(0,inplace=True)
-reactions[['Input1','Input2','Output1','Output2','Output3','Re']] = reactions[['Input1','Input2','Output1','Output2','Output3','Re']].astype(int)
+reactions,speciesidx,speciesmass,numspecies=kida_input(reac_file=reactions_file,spec_file=species_file)
 
 count=len(reactions.index)
 
-#### Test To see if Reactions File is read correctly
-def print_full(x):
-    pd.set_option('display.max_rows', len(x))
-    pd.set_option('display.max_columns', 1000)
-    pd.set_option('display.expand_frame_repr', False)
-    print(x)
-    pd.reset_option('display.max_rows')
-    pd.reset_option('display.max_columns')
-    pd.reset_option('display.expand_frame_repr')
-
 print_full(reactions)
+#print(speciesidx)
+#print(speciesmass)
+#print(numspecies)
+
 #for name,index in speciesidx.items():
 #    if index != 0:
 #        print(name,index)
-#exit()
+exit()
 ####
 
 #Functions that determine the reaction coefficients for each reaction. 
