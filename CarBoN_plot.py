@@ -21,7 +21,7 @@ infile = np.load(outfile+".npz")
 
 print(infile.files)
 
-y=infile['y']/2
+y=infile['y']/1.1
 speciesidx = infile['speciesidx'][()]  #extracts dictionary from array?
 speciesmass =infile['speciesmass'][()]
 abundance=infile['abundance']
@@ -36,7 +36,8 @@ time=365.25*(infile['time']-0.1743)
 
 total=0
 for name,index in speciesidx.items():
-    total += speciesmass[name]*y[:,index]
+    if index!=99:
+        total += speciesmass[name]*y[:,index]
 
 #exit()
 
@@ -73,7 +74,7 @@ for name,index in speciesidx.items():
 #        ax1.plot(time,y[:,index],ls='dashdot',label=name,linewidth=2.0) 
 
 plt.subplots_adjust(left=0.1, right=0.84, top=0.9, bottom=0.1,wspace=0.5) 
-ax1.set_ylim([1e-20,3e0])
+ax1.set_ylim([1e-12,3e0])
 ax1.plot(time,total,label='Test')
 #ax1.set_xlim([0,1000])
 ax1.set_xlim([0,1760])
