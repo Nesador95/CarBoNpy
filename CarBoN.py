@@ -1,89 +1,34 @@
-#!/usr/bin/python
-#title			:CarBon.py
-#description		:Kinetic Molecular Chemistry Code for Supernova Ejecta
-#author			:Ethan Deneault
-#date			:20161027
-#version		:3.6.0
-#usage			:python CarBon.py
-#notes			:See UPDATES
-#python_version		:3.5.2
-#==============================================================================
-# 
-#IMPORTANT:
-#--All KIDA Data Sets Must have a header line included in it, may need to put it in / edit yourself! 
-#--If there are 3 output species, make sure that at least ONE is placed on the first data line. 
-#Please Read data/kida_readme_2016-x-x_1.dat for info
+# -*- coding: utf-8 -*-
+'''
+CarBon.py - Kinetic Molecular Chemistry Code for Supernova Ejecta
+
+Copyright (c) 2012-2016 Ethan Deneault
+
+This file is part of CarBoN
+
+'''
 
 from scipy.integrate import odeint
-import pandas as pd
+import datainput
+import models
 import numpy as np
 from sys import exit
 
 ######
-# Input Files
+# Read data files
 ######
 
-species_file='data/kida_spec_C_O_Si_only.dat'
-reactions_file='data/kida_reac_C_O_Si_only.dat'
+file_format,species_file,reactions_file,output_file,model_type,density = datainput.settings()
+initial_abundances = datainput.abundances()
 
-######
-# Output Data File
-######
-
-output_file='output/D_2017/CD_Model/output_C1_O0.01_Si1.dat'
-
-#Read species file, create 2 dictionaries 
-#speciesidx relating species name to index 
-#speciesmass relating species name to 'mass' 
-
-speciesidx={}
-speciesmass={}
-with open(species_file,'r') as my_file:
-    for line in my_file:
-        columns = line.strip().split()
-        speciesidx[columns[0]]=int(columns[24])
-        sum=0
-        for i in range(2,24):
-            num = int(columns[i])
-            sum += num
-        speciesmass[columns[0]]=sum 
-
-numspecies=len(speciesidx)+1 # Total number of chemical species
-
-#Convert Inputs to Species Number
-#Some inputs are missing (typically Output2 or Output3) Don't change those values. Let Pandas do that. 
-
-convert = lambda x: int(speciesidx[x]) if x!='' else None
-
-#Read the reactions file and replace species names with index numbers from species file.
-#First two lines read the file with properly formatted columns. See: http://stackoverflow.com/questions/40663510/pandas-read-fwf-ignoring-values
-#Make sure that headers are set correctly to cover negative signs!
-#Third line replaces NaN with species number zero
-#Fourth line forces index number columns to be integers. 
-
-reactions = pd.read_fwf(reactions_file, header=None, skiprows=1,comment='#',converters={0:convert,1:convert,2:convert,3:convert,4:convert})
-reactions.columns = pd.read_csv(reactions_file, delim_whitespace=True,nrows=1).columns
-reactions.fillna(0,inplace=True)
-reactions[['Input1','Input2','Output1','Output2','Output3','Re']] = reactions[['Input1','Input2','Output1','Output2','Output3','Re']].astype(int)
+if file_format=='KIDA':
+    reactions,speciesidx,speciesmass,numspecies=datainput.kida_input(reac_file=reactions_file,spec_file=species_file)
+elif file_format=='BASIC':
+    reactions,speciesidx,speciesmass,numspecies=datainput.basic_input(reac_file=reactions_file,spec_file=species_file)
 
 count=len(reactions.index)
 
-#### Test To see if Reactions File is read correctly
-def print_full(x):
-    pd.set_option('display.max_rows', len(x))
-    pd.set_option('display.max_columns', 1000)
-    pd.set_option('display.expand_frame_repr', False)
-    print(x)
-    pd.reset_option('display.max_rows')
-    pd.reset_option('display.max_columns')
-    pd.reset_option('display.expand_frame_repr')
-
-print_full(reactions)
-#for name,index in speciesidx.items():
-#    if index != 0:
-#        print(name,index)
-#exit()
-####
+datainput.print_full(reactions)
 
 #Functions that determine the reaction coefficients for each reaction. 
 def arrhenius(a,b,c,T,formula):
@@ -111,48 +56,48 @@ def arrhenius(a,b,c,T,formula):
 
     return k
 
-##Defining chemnet 
-
-stepnum = 0
+######
+# Build the Chemical Network
+######
 
 def chemnet(y,t):
     f=np.zeros(numspecies,float)
-    # Define Temperature (All data from Cherchneff and Dwek 2009)  
-    t0 = 100/365.25   # 0.273... years is approximately 100 days
-    T0 = 1.8e+4       # Temperature at 100 days (1.8e+4 from C&D, 6000 from Yu et al)
-    gamma = 1.593     # "adiabatic" index
-    T=T0*(t/t0)**(3-3*gamma)
-    # "Basic temperature model" From Yu et al:
-    #T0 = 3.3e+10/3.154e+07
-    #t0 = 63.6929/365.25
-    #T = T0/t
-    
-    ##Test Code for number density (see Deneault et al 06 and Yu et al 13)
-    #Ndensinit = 1.1e+10
-    Ndens = Ndensinit*(t0/t)**3 
+ 
+# Model Selection for T(t) and n(t)
+    if model_type=='CD':
+        T,Ndens=models.cherchneffT(y,t,speciesidx,speciesmass,Ndensinit)
+    elif model_type=='Yu':
+        T,Ndens=models.YuT(t,Ndensinit)
+    else:
+        exit("No Model Loaded, Exiting Now.")
 
     for num in range(count):        
-        in1=reactions.loc[num,'Input1']
-        in2=reactions.loc[num,'Input2']
-        out1=reactions.loc[num,'Output1']
-        out2=reactions.loc[num,'Output2']
-        out3=reactions.loc[num,'Output3']
+        in1=int(reactions.loc[num,'Input1'])
+        in2=int(reactions.loc[num,'Input2'])
+        in3=int(reactions.loc[num,'Input3'])
+        out1=int(reactions.loc[num,'Output1'])
+        out2=int(reactions.loc[num,'Output2'])
+        out3=int(reactions.loc[num,'Output3'])
         alpha=reactions.loc[num,'alpha']
         beta=reactions.loc[num,'beta']
         gamma=reactions.loc[num,'gamma']
-        fo=reactions.loc[num,'Fo']
+        fo=int(reactions.loc[num,'Formula'])
+
         if num==0:
             print('Still going! t={0}, Temp={1}'.format(t,T))
 
-        #print(in1,in2,out1,out2,out3,alpha,beta,gamma,fo)
-        #print(arrhenius(alpha,beta,gamma,t,fo)) 
-        if in2 != 0:
+        if in2!=0 and in2!=99:
             f[in1] -= Ndens*arrhenius(alpha,beta,gamma,T,fo)*y[in1]*y[in2]
             f[in2] -= Ndens*arrhenius(alpha,beta,gamma,T,fo)*y[in1]*y[in2]
             f[out1] += Ndens*arrhenius(alpha,beta,gamma,T,fo)*y[in1]*y[in2] 
             f[out2] += Ndens*arrhenius(alpha,beta,gamma,T,fo)*y[in1]*y[in2]
             f[out3] += Ndens*arrhenius(alpha,beta,gamma,T,fo)*y[in1]*y[in2]
-        elif in2 == 0:
+        elif in2==99:
+            f[in1] -= Ndens*arrhenius(alpha,beta,gamma,T,fo)*y[in1]*(y[speciesidx['C']]+y[speciesidx['O']])
+            f[out1] += Ndens*arrhenius(alpha,beta,gamma,T,fo)*y[in1]*(y[speciesidx['C']]+y[speciesidx['O']]) 
+            f[out2] += Ndens*arrhenius(alpha,beta,gamma,T,fo)*y[in1]*(y[speciesidx['C']]+y[speciesidx['O']])
+            f[out3] += Ndens*arrhenius(alpha,beta,gamma,T,fo)*y[in1]*(y[speciesidx['C']]+y[speciesidx['O']])
+        elif in2==0:
             f[in1] -= arrhenius(alpha,beta,gamma,T,fo)*y[in1]
             f[out1] += arrhenius(alpha,beta,gamma,T,fo)*y[in1] 
             f[out2] += arrhenius(alpha,beta,gamma,T,fo)*y[in1]
@@ -160,17 +105,29 @@ def chemnet(y,t):
     return f
 
 
+######
+# Set up Time Steps 
+######
 
-# Remember that time is measured in units of years.
-time = np.linspace(60/365.25,5,1000000)
+start_time = 60/365.25
+end_time = 1760/365.25
 
-# Initial Values #########################################
-yinit = np.zeros(numspecies,float)          
-yinit[speciesidx['C']]  = 1            #Initial Carbon
-yinit[speciesidx['O']]  = 0.01              #Initial Oxygen 
-yinit[speciesidx['Si']] = 1            #Initial Silicon
-Ndensinit = np.sum(yinit)*1e10
-##########################################################
+time = np.linspace(start_time,end_time,1000000)
+
+######
+# Initial Values
+######
+
+yinit = np.zeros(numspecies,float) 
+
+for species,abund in initial_abundances.items():
+    yinit[speciesidx[species]] = abund
+         
+Ndensinit = np.sum(yinit)*density
+
+######
+# Initialize LSODA
+######
 
 y = odeint(chemnet,yinit,time,mxstep=5000000,rtol=1e-13,atol=1e-13)
 
@@ -189,4 +146,4 @@ print(abundance)
 # Write to data file
 ######
 
-np.savez(output_file,time=time,speciesidx=speciesidx,y=y,abundance=abundance)
+np.savez(output_file,time=time,speciesidx=speciesidx,y=y,abundance=abundance,speciesmass=speciesmass)
