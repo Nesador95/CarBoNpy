@@ -46,12 +46,47 @@ def kida_input(reac_file,spec_file):
      
     numspecies=len(speciesidx)+1
 
-    convert = lambda x: int(speciesidx[x]) if x!='' else None
+    convert = lambda x: speciesidx[x] if x!='' else None
 
     reactions=pd.read_fwf(reac_file,comment='#',names=colnames,widths=colwidths,usecols=collist,\
                               converters={0:convert,1:convert,2:convert,3:convert,4:convert,5:convert})
     reactions.fillna(0,inplace=True)
-    reactions[["Input1","Input2","Input3","Output1","Output2","Output3"]] = reactions[["Input1","Input2","Input3","Output1","Output2","Output3"]].astype(int)
+    reactions[colnames[0:6]] = reactions[colnames[0:6]].astype(int)
+    
+    return reactions,speciesidx,speciesmass,numspecies
+
+"""
+This function reads in "basic format" reactions/species files using Pandas. 
+Basic Reaction Format is a comma delimited file. 
+
+Input1 Input2 Input3 Output1 Output2 Output3 Alpha Beta Gamma Formula
+
+For all Arrhenius reactions, Formula should be 3.
+
+Basic Species Format:
+
+Name Mass Index
+
+This probably needs more documentation. 
+"""
+
+def basic_input(reac_file,spec_file):
+    speciesidx={}
+    speciesmass={}
+    colnames=["Input1","Input2","Input3","Output1","Output2","Output3","alpha","beta","gamma","Formula"]
+    with open(spec_file,'r') as my_file:
+        for line in my_file:
+            columns = line.strip().split()
+            speciesidx[columns[0]]=int(columns[2])
+            speciesmass[columns[0]]=int(columns[1])
+                
+    numspecies=len(speciesidx)+1
+
+    convert = lambda x: speciesidx[x] if x!=' ' else None
+
+    reactions=pd.read_csv(reac_file,comment='#',names=colnames,converters={0:convert,1:convert,2:convert,3:convert,4:convert,5:convert})
+    reactions.fillna(0,inplace=True)
+    reactions[colnames[0:6]] = reactions[colnames[0:6]].astype(int)
     
     return reactions,speciesidx,speciesmass,numspecies
 
@@ -90,3 +125,17 @@ def settings():
     density = model.getfloat('density')
 
     return file_format,species_file,reactions_file,output_file,model_type,density
+
+"""
+This function reads the abundances.ini file
+"""
+
+def abundances():
+    initial = {}
+    with open('abundances.ini','r') as my_file:
+        header = my_file.readline()
+        for line in my_file:
+            columns = line.strip().split()
+            initial[columns[0]]=float(columns[1])
+            
+    return initial

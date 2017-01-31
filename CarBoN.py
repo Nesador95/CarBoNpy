@@ -19,8 +19,13 @@ from sys import exit
 ######
 
 file_format,species_file,reactions_file,output_file,model_type,density = datainput.settings()
+initial_abundances = datainput.abundances()
 
-reactions,speciesidx,speciesmass,numspecies=datainput.kida_input(reac_file=reactions_file,spec_file=species_file)
+if file_format=='KIDA':
+    reactions,speciesidx,speciesmass,numspecies=datainput.kida_input(reac_file=reactions_file,spec_file=species_file)
+elif file_format=='BASIC':
+    reactions,speciesidx,speciesmass,numspecies=datainput.basic_input(reac_file=reactions_file,spec_file=species_file)
+
 count=len(reactions.index)
 
 datainput.print_full(reactions)
@@ -51,7 +56,9 @@ def arrhenius(a,b,c,T,formula):
 
     return k
 
-##Defining chemnet 
+######
+# Build the Chemical Network
+######
 
 def chemnet(y,t):
     f=np.zeros(numspecies,float)
@@ -65,16 +72,17 @@ def chemnet(y,t):
         exit("No Model Loaded, Exiting Now.")
 
     for num in range(count):        
-        in1=reactions.loc[num,'Input1']
-        in2=reactions.loc[num,'Input2']
-        in3=reactions.loc[num,'Input3']
-        out1=reactions.loc[num,'Output1']
-        out2=reactions.loc[num,'Output2']
-        out3=reactions.loc[num,'Output3']
+        in1=int(reactions.loc[num,'Input1'])
+        in2=int(reactions.loc[num,'Input2'])
+        in3=int(reactions.loc[num,'Input3'])
+        out1=int(reactions.loc[num,'Output1'])
+        out2=int(reactions.loc[num,'Output2'])
+        out3=int(reactions.loc[num,'Output3'])
         alpha=reactions.loc[num,'alpha']
         beta=reactions.loc[num,'beta']
         gamma=reactions.loc[num,'gamma']
-        fo=reactions.loc[num,'Formula']
+        fo=int(reactions.loc[num,'Formula'])
+
         if num==0:
             print('Still going! t={0}, Temp={1}'.format(t,T))
 
@@ -97,17 +105,29 @@ def chemnet(y,t):
     return f
 
 
+######
+# Set up Time Steps 
+######
 
-# Remember that time is measured in units of years.
-time = np.linspace(60/365.25,5,1000000)
+start_time = 60/365.25
+end_time = 1760/365.25
 
-# Initial Values #########################################
-yinit = np.zeros(numspecies,float)          
-yinit[speciesidx['C']]  = 0.1            #Initial Carbon
-yinit[speciesidx['O']]  = 1              #Initial Oxygen 
-yinit[speciesidx['Si']] = 0            #Initial Silicon
+time = np.linspace(start_time,end_time,1000000)
+
+######
+# Initial Values
+######
+
+yinit = np.zeros(numspecies,float) 
+
+for species,abund in initial_abundances.items():
+    yinit[speciesidx[species]] = abund
+         
 Ndensinit = np.sum(yinit)*density
-##########################################################
+
+######
+# Initialize LSODA
+######
 
 y = odeint(chemnet,yinit,time,mxstep=5000000,rtol=1e-13,atol=1e-13)
 

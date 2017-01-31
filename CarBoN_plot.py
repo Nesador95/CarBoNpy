@@ -25,7 +25,7 @@ y=infile['y']/1.1
 speciesidx = infile['speciesidx'][()]  #extracts dictionary from array?
 speciesmass =infile['speciesmass'][()]
 abundance=infile['abundance']
-time=365.25*(infile['time']-0.1743)
+time=365.25*(infile['time']-(60/365.25))
 
 #print(speciesidx)
 #print(y[-1,11])
@@ -74,10 +74,10 @@ for name,index in speciesidx.items():
 #        ax1.plot(time,y[:,index],ls='dashdot',label=name,linewidth=2.0) 
 
 plt.subplots_adjust(left=0.1, right=0.84, top=0.9, bottom=0.1,wspace=0.5) 
-ax1.set_ylim([1e-12,3e0])
+ax1.set_ylim([1e-14,3e0])
 ax1.plot(time,total,label='Test')
-#ax1.set_xlim([0,1000])
-ax1.set_xlim([0,1760])
+ax1.set_xlim([0,200])
+#ax1.set_xlim([0,1700])
 ax1.set_yscale('log')
 ax1.set_xlabel('t-t0 (days)')
 ax1.set_ylabel('Abundance')
@@ -87,13 +87,13 @@ plt.show()
 ####################################################
 
 #ax1.plot(time,total,label='Test')
-ax1.set_ylim([5e-11,2.01e10])
+#ax1.set_ylim([5e-11,2.01e10])
 #ax1.set_xlim([73,1826])
 #ax1.set_xlim([550,600])
-ax1.set_yscale('log')
-ax1.set_xlabel('Time (days)')
-ax1.set_ylabel('Abundance')
-ax1.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+#ax1.set_yscale('log')
+#ax1.set_xlabel('Time (days)')
+#ax1.set_ylabel('Abundance')
+#ax1.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 #
 #ax2=fig.add_subplot(122)
 #labels = [' ','O','C','C2','C3','C4','C5','C6','CO',' ']
@@ -104,4 +104,4 @@ ax1.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 #ax2.set_title('Final Abundance')
 #ax2.set_ylabel('Abundance')
 #plt.subplots_adjust(left=0.1, right=0.94, top=0.9, bottom=0.1,wspace=0.5)
-plt.show()
+#plt.show()
