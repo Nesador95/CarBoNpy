@@ -20,8 +20,9 @@ See C&D (2009) Table 1 for values for 20M_sun SNe
 mu_gas is the mean molecular weight of the gas.
 """ 
 
-def cherchneffT(y,t,idx,mass,dens,T0=1.8e+4,gamma=1.593,t0=100):
-    t0 /= 365.25   # 0.273... years is approximately 100 days
+def cherchneffT(y,t,idx,mass,dens,T0=1.8e+4,gamma=1.593,t0=100,t6=63.31):
+    t6 /= 365.25
+    t0 /= 365.25  
     T=T0*(t/t0)**(3-3*gamma)
     sup,sub=0,0
     for name,index in idx.items():
@@ -43,9 +44,9 @@ Default T0 at 100 days is 3800K
 t(6000K) = 5.47e6 seconds = 63.31 days
 """
 
-def YuT(t,dens,T0=3.3e+10,t0=63.31):
-    T0 /= 3.154e+07 # Temperature coefficient in K.yr
-    t0 /= 365.25 # t(6000K) in years
-    T = T0/t
-    ndens = dens*(t0/t)**3
+def YuT(t,dens,T0=3800,t0=100,t6=63.31):
+    t6 /= 365.25
+    t0 /= 365.25
+    T = T0*(t0/t)
+    ndens = dens*(t6/t)**3
     return T,ndens
