@@ -123,8 +123,9 @@ def settings():
     output_file = 'output/' + files['output file']
     model_type = model['model type']
     density = model.getfloat('density')
+    temperature = model.getfloat('temperature')
 
-    return file_format,species_file,reactions_file,output_file,model_type,density
+    return file_format,species_file,reactions_file,output_file,model_type,density,temperature
 
 """
 This function reads the abundances.ini file

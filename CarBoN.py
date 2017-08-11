@@ -18,7 +18,7 @@ from sys import exit
 # Read data files
 ######
 
-file_format,species_file,reactions_file,output_file,model_type,density = datainput.settings()
+file_format,species_file,reactions_file,output_file,model_type,density,Tinit = datainput.settings()
 initial_abundances = datainput.abundances()
 
 if file_format=='KIDA':
@@ -29,6 +29,8 @@ elif file_format=='BASIC':
 count=len(reactions.index)
 
 datainput.print_full(reactions)
+
+#exit()
 
 #Functions that determine the reaction coefficients for each reaction. 
 def arrhenius(a,b,c,T,formula):
@@ -65,9 +67,9 @@ def chemnet(y,t):
  
 # Model Selection for T(t) and n(t)
     if model_type=='CD':
-        T,Ndens=models.cherchneffT(y,t,speciesidx,speciesmass,Ndensinit)
+        T,Ndens=models.cherchneffT(y,t,speciesidx,speciesmass,dens=Ndensinit,T0=Tinit)
     elif model_type=='Yu':
-        T,Ndens=models.YuT(t,Ndensinit)
+        T,Ndens=models.YuT(t,dens=Ndensinit,T0=Tinit)
     else:
         exit("No Model Loaded, Exiting Now.")
 
@@ -93,10 +95,10 @@ def chemnet(y,t):
             f[out2] += Ndens*arrhenius(alpha,beta,gamma,T,fo)*y[in1]*y[in2]
             f[out3] += Ndens*arrhenius(alpha,beta,gamma,T,fo)*y[in1]*y[in2]
         elif in2==99:
-            f[in1] -= Ndens*arrhenius(alpha,beta,gamma,T,fo)*y[in1]*(y[speciesidx['C']]+y[speciesidx['O']])
-            f[out1] += Ndens*arrhenius(alpha,beta,gamma,T,fo)*y[in1]*(y[speciesidx['C']]+y[speciesidx['O']]) 
-            f[out2] += Ndens*arrhenius(alpha,beta,gamma,T,fo)*y[in1]*(y[speciesidx['C']]+y[speciesidx['O']])
-            f[out3] += Ndens*arrhenius(alpha,beta,gamma,T,fo)*y[in1]*(y[speciesidx['C']]+y[speciesidx['O']])
+            f[in1] -= Ndens*arrhenius(alpha,beta,gamma,T,fo)*y[in1]*(y[speciesidx['C']]+y[speciesidx['O']]+y[speciesidx['Si']])
+            f[out1] += Ndens*arrhenius(alpha,beta,gamma,T,fo)*y[in1]*(y[speciesidx['C']]+y[speciesidx['O']]+y[speciesidx['Si']]) 
+            f[out2] += Ndens*arrhenius(alpha,beta,gamma,T,fo)*y[in1]*(y[speciesidx['C']]+y[speciesidx['O']]+y[speciesidx['Si']])
+            f[out3] += Ndens*arrhenius(alpha,beta,gamma,T,fo)*y[in1]*(y[speciesidx['C']]+y[speciesidx['O']]+y[speciesidx['Si']])
         elif in2==0:
             f[in1] -= arrhenius(alpha,beta,gamma,T,fo)*y[in1]
             f[out1] += arrhenius(alpha,beta,gamma,T,fo)*y[in1] 
@@ -109,7 +111,7 @@ def chemnet(y,t):
 # Set up Time Steps 
 ######
 
-start_time = 60/365.25
+start_time = 70/365.25 #60/365.25
 end_time = 1760/365.25
 
 time = np.linspace(start_time,end_time,1000000)
@@ -122,8 +124,13 @@ yinit = np.zeros(numspecies,float)
 
 for species,abund in initial_abundances.items():
     yinit[speciesidx[species]] = abund
+
          
-Ndensinit = np.sum(yinit)*density
+Ndensinit = density #np.sum(yinit)*density
+
+#print('Ndensinit = {}'.format(Ndensinit))
+
+#exit()
 
 ######
 # Initialize LSODA

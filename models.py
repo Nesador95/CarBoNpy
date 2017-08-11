@@ -24,13 +24,13 @@ def cherchneffT(y,t,idx,mass,dens,T0=1.8e+4,gamma=1.593,t0=100,t6=63.31):
     t6 /= 365.25
     t0 /= 365.25  
     T=T0*(t/t0)**(3-3*gamma)
-    sup,sub=0,0
-    for name,index in idx.items():
-        if index!=99:
-            sup += mass[name]*y[index]
-            sub += y[index]
-    mu_gas = sup/sub
-    ndens = dens/mu_gas*(t0/t)**3
+#    sup,sub=0,0
+#    for name,index in idx.items():
+#        if index!=99:
+#            sup += mass[name]*y[index]*1.66054e-24
+#            sub += y[index]
+#    mu_gas = sup/sub
+    ndens = dens*(t6/t)**3#dens/mu_gas*(t6/t)**3
     return T,ndens
 
 """
@@ -44,9 +44,9 @@ Default T0 at 100 days is 3800K
 t(6000K) = 5.47e6 seconds = 63.31 days
 """
 
-def YuT(t,dens,T0=3800,t0=100,t6=63.31):
+def YuT(t,dens,T0=3800,gamma=4/3,t0=100,t6=63.31):
     t6 /= 365.25
     t0 /= 365.25
-    T = T0*(t0/t)
+    T = T0*(t/t0)**(3-3*gamma)
     ndens = dens*(t6/t)**3
     return T,ndens
