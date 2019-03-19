@@ -51,7 +51,7 @@ time = 365.25 * (infile['time'])         #-(99/365.25))
 
 total = 0
 for name, index in speciesidx.items():
-    if index != 99:
+    if index != 98:
         total += speciesmass[name] * y[:,index]
 
 #exit()
@@ -65,14 +65,14 @@ fig = plt.figure(figsize=(10, 10))
 ax1 = fig.add_subplot(111)
 
 
-ax1.plot(time, y[:, 4], label = '$\mathrm{CO}$', linewidth = 2.0)
-ax1.plot(time, y[:, 5], label = '$\mathrm{C_2}$', linewidth = 2.0)
-ax1.plot(time, y[:, 6], label = '$\mathrm{C_3}$', linewidth = 2.0)
-ax1.plot(time, y[:, 14], label = '$\mathrm{O_2}$', linewidth = 2.0)
-ax1.plot(time, y[:, 12], '--', label = '$\mathrm{SiC}$', linewidth = 2.0)
-ax1.plot(time, y[:, 13], '--', label = '$\mathrm{SiO}$', linewidth = 2.0)
-ax1.plot(time, y[:, 15], '-.', label = '$\mathrm{(SiC)_2}$', linewidth = 2.0)
-ax1.plot(time, y[:, 16], '-.', label = '$\mathrm{(SiO)_2}$', linewidth = 2.0)
+ax1.plot(time, y[:, 0], label = '$\mathrm{C}$', linewidth = 4.0)
+ax1.plot(time, y[:, 1], label = '$\mathrm{O}$', linewidth = 2.0)
+ax1.plot(time, y[:, 2], label = '$\mathrm{C_2}$', linewidth = 2.0)
+ax1.plot(time, y[:, 3], label = '$\mathrm{CO}$', linewidth = 2.0)
+ax1.plot(time, y[:, 4], '--', label = '$\mathrm{C_3}$', linewidth = 2.0)
+#ax1.plot(time, y[:, 13], '--', label = '$\mathrm{SiO}$', linewidth = 2.0)
+#ax1.plot(time, y[:, 15], '-.', label = '$\mathrm{(SiC)_2}$', linewidth = 2.0)
+#ax1.plot(time, y[:, 16], '-.', label = '$\mathrm{(SiO)_2}$', linewidth = 2.0)
 
 #ax1.plot(time,total,label='Test',color='black')
         
@@ -88,9 +88,9 @@ ax1.plot(time, y[:, 16], '-.', label = '$\mathrm{(SiO)_2}$', linewidth = 2.0)
 
 plt.subplots_adjust(left = 0.1, right = 0.84,
                     top = 0.9, bottom = 0.1, wspace = 0.5) 
-ax1.set_ylim([1e-20, 2e-2])
-#ax1.set_xlim([0,200])
-ax1.set_xlim([100, 1760])
+ax1.set_ylim([1e-10, 1e10])
+#ax1.set_xlim([100,300])
+ax1.set_xlim([10, 1760])
 ax1.set_yscale('log')
 ax1.set_xlabel('t-t0 (days)')
 ax1.xaxis.set_major_locator(ticker.MultipleLocator(100))

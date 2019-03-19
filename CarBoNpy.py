@@ -16,23 +16,28 @@ import numpy as np
 
 file_format, species_file, reactions_file, output_file, model_type, density, Tinit, start_time, end_time, outfile = datainput.settings()
 initial_abundances = datainput.abundances()
-
+print(initial_abundances)
 ##############################################################################
 # The Following code reads the data files in KIDA format and BASIC format 
 ##############################################################################
+kida_reac = datainput.KIDA_reac(reactions_file)
+kida_spec = datainput.KIDA_spec(species_file)
+kida_reac = datainput.KIDA_reac_com_readable(kida_reac,kida_spec)
 
-if file_format == 'KIDA':
-    reactions,speciesidx,speciesmass, numspecies = datainput.kida_input(
-                                                   reac_file=reactions_file,
-                                                   spec_file=species_file)
-elif file_format == 'BASIC':
-    reactions, speciesidx, speciesmass, numspecies = datainput.basic_input(
-                                                     reac_file=reactions_file,
-                                                     spec_file=species_file)
+"""
+This list contains the monoatomic molecules that result from the use of 'M' 
+in the KIDA files
+C, O, Si
+"""
 
-count=len(reactions.index)
+monoatomic_list = [0, 1, 21]
 
-datainput.print_full(reactions)
+
+
+count=len(list(kida_reac.index))
+
+
+
 
 ##############################################################################
 # The following are functions that determine the reaction coefficients 
@@ -70,12 +75,12 @@ def arrhenius(a,b,c,T,formula):
 ##############################################################################
 
 def chemnet(y,t):
-    f=np.zeros(numspecies,float)
+    f=np.zeros([len(kida_spec.index)])
  
 # Model Selection for T(t) and n(t)
     if model_type=='CD':
-        T,Ndens=models.cherchneffT(y,t,speciesidx,
-                                   speciesmass,
+        T,Ndens=models.cherchneffT(y,t,kida_spec['species_#'].to_dict(),
+                                   kida_spec['#_of_atoms'].to_dict(),
                                    dens=Ndensinit,
                                    T0=Tinit)
     elif model_type=='Yu':
@@ -83,69 +88,70 @@ def chemnet(y,t):
     else:
         exit("No Model Loaded, Exiting Now.")
 
-    for num in range(count):        
-        in1=int(reactions.loc[num,'Input1'])
-        in2=int(reactions.loc[num,'Input2'])
-        in3=int(reactions.loc[num,'Input3'])
-        out1=int(reactions.loc[num,'Output1'])
-        out2=int(reactions.loc[num,'Output2'])
-        out3=int(reactions.loc[num,'Output3'])
-        alpha=reactions.loc[num,'alpha']
-        beta=reactions.loc[num,'beta']
-        gamma=reactions.loc[num,'gamma']
-        fo=int(reactions.loc[num,'Formula'])
+    for num in range(count):
+        
+        in1=int(kida_reac.loc[num]['Input1_id'])
+        in2=int(kida_reac.loc[num]['Input2_id'])
+        out1=int(kida_reac.loc[num]['Output1_id'])
+        out2=int(kida_reac.loc[num]['Output2_id'])
+        out3=int(kida_reac.loc[num]['Output3_id'])
+        alpha=kida_reac.loc[num]['alpha']
+        beta=kida_reac.loc[num]['beta']
+        gamma=kida_reac.loc[num]['gamma']
+        fo=kida_reac.loc[num]['Formula']
 
         if num==0:
             print('Still going! t={0}, Temp={1}'.format(t,T))
 
-        if in2!=0 and in2!=99:
+        if (in2!=18 or in2!=19 or in2!=20) and in2!=98:
             f[in1] -= Ndens * arrhenius(alpha,beta,gamma,T,fo) \
                       * y[in1] * y[in2]
             f[in2] -= Ndens * arrhenius(alpha,beta,gamma,T,fo) \
                       * y[in1] * y[in2]
             f[out1] += Ndens * arrhenius(alpha,beta,gamma,T,fo) \
-                       * y[in1] * y[in2] 
+                       * y[in1] * y[in2]          
             f[out2] += Ndens * arrhenius(alpha,beta,gamma,T,fo) \
-                       * y[in1] * y[in2]
-            f[out3] += Ndens * arrhenius(alpha,beta,gamma,T,fo) \
-                       * y[in1] * y[in2]
-        elif in2==99:
+                       * y[in1] * y[in2]           
+            if out3!=18 or in2==19 or in2==20:
+                f[out3] += Ndens * arrhenius(alpha,beta,gamma,T,fo) \
+                           * y[in1] * y[in2]
+        elif in2==98:
             f[in1] -= Ndens * arrhenius(alpha,beta,gamma,T,fo) \
-                      * y[in1] * (y[speciesidx['C']] + y[speciesidx['O']] \
-                      + y[speciesidx['Si']])
+                      * y[in1] * (monoatomic_list[0]\
+                         + monoatomic_list[1] \
+                      + monoatomic_list[2])
             f[out1] += Ndens * arrhenius(alpha,beta,gamma,T,fo) \
-                       * y[in1] * (y[speciesidx['C']] + y[speciesidx['O']] \
-                       + y[speciesidx['Si']]) 
+                       * y[in1] * (monoatomic_list[0] + monoatomic_list[1] \
+                       + monoatomic_list[2]) 
             f[out2] += Ndens * arrhenius(alpha,beta,gamma,T,fo) * y[in1] \
-                       * (y[speciesidx['C']] + y[speciesidx['O']] \
-                       + y[speciesidx['Si']])
+                       * (monoatomic_list[0] + monoatomic_list[1] \
+                       + monoatomic_list[2])
             f[out3] += Ndens * arrhenius(alpha,beta,gamma,T,fo) * y[in1] \
-                       * (y[speciesidx['C']] + y[speciesidx['O']] \
-                       + y[speciesidx['Si']])
-        elif in2==0:
+                       * (monoatomic_list[0] + monoatomic_list[1] \
+                       + monoatomic_list[2])
+        elif in2==18 or in2==19 or in2==20:
             f[in1] -= arrhenius(alpha, beta, gamma, T, fo) * y[in1]
             f[out1] += arrhenius(alpha, beta, gamma, T, fo) * y[in1] 
             f[out2] += arrhenius(alpha, beta, gamma, T, fo) * y[in1]
             f[out3] += arrhenius(alpha, beta, gamma, T, fo) * y[in1]
+    print(f)        
     return f
 
 ##############################################################################
 # The following code sets the time steps
 ##############################################################################
 
-#start_time = 70/365.25 #60/365.25
-#end_time = 1760/365.25
-#
 time = np.linspace(start_time/365.25,end_time/365.25,1000000)
 
 ##############################################################################
 # The following are the initial values
 ##############################################################################
 
-yinit = np.zeros(numspecies,float) 
-
+yinit = np.zeros([len(kida_spec.index)]) 
+                           
 for species,abund in initial_abundances.items():
-    yinit[speciesidx[species]] = abund
+    yinit[int(species)] = abund
+    print(species,abund,yinit)
 
          
 Ndensinit = density #np.sum(yinit)*density
@@ -167,7 +173,7 @@ y = odeint(chemnet, yinit, time,
 
 abundance=[]
 
-for i in range(1,numspecies):
+for i in range(len(kida_spec.index)):
     abundance.append(y[-1,i])
 
 print(abundance)
@@ -176,5 +182,5 @@ print(abundance)
 # The following writes to a data file
 ##############################################################################
 
-np.savez(output_file,time=time,speciesidx=speciesidx, y = y,
-         abundance=abundance,speciesmass=speciesmass)
+np.savez(output_file,time=time,speciesidx=kida_spec['species_#'].to_dict(), y = y,
+         abundance=abundance,speciesmass=kida_spec['#_of_atoms'].to_dict())
