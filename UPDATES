@@ -24,3 +24,7 @@ v. 3.6.0
 Updated to save output into a file in the output/ directory. 
 Plot using the CarBoN_plot.py script. Probably want to make this more efficient 
 but fuck it for now. 
+
+v. 3.7.2
+--------
+Lots of updates from Nesador95 to make the back end run more smoothly. Pandas dataframes. 
