@@ -58,20 +58,16 @@ def KIDA_spec(spec_file):
                           header=None)
     spec_df.columns = list(range(0,len(colwidths)))
     
-    spec_df['#_of_atoms'] = spec_df[2]+spec_df[3]+spec_df[4]+\
-            spec_df[5]+spec_df[6]+spec_df[7]+spec_df[8]+spec_df[9]+\
-            spec_df[10]+spec_df[11]+spec_df[12]+spec_df[13]+spec_df[14]\
-            +spec_df[15]+spec_df[16]+spec_df[17]+spec_df[18]+spec_df[19]\
-            +spec_df[20]+spec_df[21]+spec_df[22]+spec_df[23]
-    spec_df = spec_df.drop([2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,
-                            20,21,22,23], axis=1)
+    col_list=list(spec_df)
+
+    spec_df['#_of_atoms'] = spec_df[col_list[2:24]].sum(axis=1)
+    spec_df = spec_df.drop(col_list[2:24], axis=1)
     spec_df.rename(columns={0 : "species",
                        1 : "charge",
                        24: "species_#"}, inplace=True)
                
     spec_df.at[21, 'species_#'] = 99
     
-                                
     return spec_df
 
 def KIDA_reac_com_readable(KIDA_reac, KIDA_spec):
