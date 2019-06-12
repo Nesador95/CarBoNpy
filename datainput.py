@@ -68,13 +68,8 @@ def KIDA_spec(spec_file):
     spec_df.rename(columns={0 : "species",
                        1 : "charge",
                        24: "species_#"}, inplace=True)
-    
-    spec_df.at[18, 'species_#'] = 19
-    spec_df.at[19, 'species_#'] = 20
-    spec_df.at[20, 'species_#'] = 21                     
-    spec_df.at[21, 'species_#'] = 99
                
-    spec_df['species_#'] = spec_df['species_#'] - 1
+    spec_df.at[21, 'species_#'] = 99
     
                                 
     return spec_df
@@ -96,12 +91,6 @@ def KIDA_reac_com_readable(KIDA_reac, KIDA_spec):
     KIDA_reac['Output1_id'] = KIDA_reac['Output1'].map(dictionary)
     KIDA_reac['Output2_id'] = KIDA_reac['Output2'].map(dictionary)
     KIDA_reac['Output3_id'] = KIDA_reac['Output3'].map(dictionary)
-    
-    KIDA_reac['Input1_id'] = KIDA_reac['Input1_id'].fillna(0)
-    KIDA_reac['Input2_id'] = KIDA_reac['Input2_id'].fillna(0)
-    KIDA_reac['Output1_id'] = KIDA_reac['Output1_id'].fillna(0)
-    KIDA_reac['Output2_id'] = KIDA_reac['Output2_id'].fillna(0)
-    KIDA_reac['Output3_id'] = KIDA_reac['Output3_id'].fillna(0)
     
     return KIDA_reac
 ##############################################################################

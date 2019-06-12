@@ -30,7 +30,7 @@ in the KIDA files
 C, O, Si
 """
 
-monoatomic_list = [0, 1, 21]
+monoatomic_list = [1, 2, 22]
 
 
 
@@ -90,11 +90,11 @@ def chemnet(y,t):
 
     for num in range(count):
         
-        in1=int(kida_reac.loc[num]['Input1_id'])
-        in2=int(kida_reac.loc[num]['Input2_id'])
-        out1=int(kida_reac.loc[num]['Output1_id'])
-        out2=int(kida_reac.loc[num]['Output2_id'])
-        out3=int(kida_reac.loc[num]['Output3_id'])
+        in1=kida_reac.loc[num]['Input1_id']
+        in2=kida_reac.loc[num]['Input2_id']
+        out1=kida_reac.loc[num]['Output1_id']
+        out2=kida_reac.loc[num]['Output2_id']
+        out3=kida_reac.loc[num]['Output3_id']     
         alpha=kida_reac.loc[num]['alpha']
         beta=kida_reac.loc[num]['beta']
         gamma=kida_reac.loc[num]['gamma']
@@ -103,38 +103,43 @@ def chemnet(y,t):
         if num==0:
             print('Still going! t={0}, Temp={1}'.format(t,T))
 
-        if (in2!=18 or in2!=19 or in2!=20) and in2!=98:
-            f[in1] -= Ndens * arrhenius(alpha,beta,gamma,T,fo) \
+        if in2!=0 and in2!=99 :
+            f[in1] -=  arrhenius(alpha,beta,gamma,T,fo) \
                       * y[in1] * y[in2]
-            f[in2] -= Ndens * arrhenius(alpha,beta,gamma,T,fo) \
+            f[in2] -=  arrhenius(alpha,beta,gamma,T,fo) \
                       * y[in1] * y[in2]
-            f[out1] += Ndens * arrhenius(alpha,beta,gamma,T,fo) \
-                       * y[in1] * y[in2]          
-            f[out2] += Ndens * arrhenius(alpha,beta,gamma,T,fo) \
+            f[out1] +=   arrhenius(alpha,beta,gamma,T,fo) \
                        * y[in1] * y[in2]           
-            if out3!=18 or in2==19 or in2==20:
-                f[out3] += Ndens * arrhenius(alpha,beta,gamma,T,fo) \
+            if isinstance(out2,int) == True:
+                f[out2] +=  arrhenius(alpha,beta,gamma,T,fo) \
+                       * y[in1] * y[in2]
+            if isinstance(out3,int) == True:
+                f[out3] += arrhenius(alpha,beta,gamma,T,fo) \
                            * y[in1] * y[in2]
-        elif in2==98:
-            f[in1] -= Ndens * arrhenius(alpha,beta,gamma,T,fo) \
-                      * y[in1] * (monoatomic_list[0]\
-                         + monoatomic_list[1] \
+        elif in2==99:
+            f[in1] -=  arrhenius(alpha,beta,gamma,T,fo) \
+                      * y[in1] * (kida_spec.loc[0]['species_#']\
+                         + kida_spec.loc[2]['species_#'] \
                       + monoatomic_list[2])
-            f[out1] += Ndens * arrhenius(alpha,beta,gamma,T,fo) \
-                       * y[in1] * (monoatomic_list[0] + monoatomic_list[1] \
-                       + monoatomic_list[2]) 
-            f[out2] += Ndens * arrhenius(alpha,beta,gamma,T,fo) * y[in1] \
-                       * (monoatomic_list[0] + monoatomic_list[1] \
+            f[out1] +=  arrhenius(alpha,beta,gamma,T,fo) \
+                       * y[in1] * (kida_spec.loc[0]['species_#'] + kida_spec.loc[1]['species_#'] \
                        + monoatomic_list[2])
-            f[out3] += Ndens * arrhenius(alpha,beta,gamma,T,fo) * y[in1] \
-                       * (monoatomic_list[0] + monoatomic_list[1] \
+            if isinstance(out2,int) == True:
+                f[out2] += arrhenius(alpha,beta,gamma,T,fo) * y[in1] \
+                       * (kida_spec.loc[0]['species_#'] + kida_spec.loc[1]['species_#'] \
                        + monoatomic_list[2])
-        elif in2==18 or in2==19 or in2==20:
+            if isinstance(out3,int) == True:
+                f[out3] += arrhenius(alpha,beta,gamma,T,fo) * y[in1] \
+                        * (kida_spec.loc[0]['species_#'] + kida_spec.loc[1]['species_#'] \
+                       + monoatomic_list[2])
+
+        elif in2==0:
             f[in1] -= arrhenius(alpha, beta, gamma, T, fo) * y[in1]
-            f[out1] += arrhenius(alpha, beta, gamma, T, fo) * y[in1] 
-            f[out2] += arrhenius(alpha, beta, gamma, T, fo) * y[in1]
-            f[out3] += arrhenius(alpha, beta, gamma, T, fo) * y[in1]
-    print(f)        
+            f[out1] += arrhenius(alpha, beta, gamma, T, fo) * y[in1]
+            if isinstance(out2,int) == True:
+                f[out2] += arrhenius(alpha, beta, gamma, T, fo) * y[in1]
+            if isinstance(out3,int) == True:
+                f[out3] += arrhenius(alpha, beta, gamma, T, fo) * y[in1]
     return f
 
 ##############################################################################
