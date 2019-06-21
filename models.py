@@ -8,9 +8,7 @@ This file is part of CarBoN
 
 """
 
-##############################################################################
-# The following is the Cherchneff Temperature and Density Model
-##############################################################################
+import numpy as np
 
 def cherchneffT(y, t, idx, mass, dens, T0 = 1.8e+4,
                 gamma = 1.593, t0 = 100, t6 = 63.31):
@@ -26,10 +24,8 @@ def cherchneffT(y, t, idx, mass, dens, T0 = 1.8e+4,
     mu_gas is the mean molecular weight of the gas.
     
     """ 
-    
-    t6 /= 365.25
-    t0 /= 365.25  
     T=T0 * (t / t0) ** (3 - 3 * gamma)
+
 #    sup,sub=0,0
 #    for name,index in idx.items():
 #        if index!=99:
@@ -39,9 +35,6 @@ def cherchneffT(y, t, idx, mass, dens, T0 = 1.8e+4,
     ndens = dens * (t6 / t) ** 3   #dens/mu_gas*(t6/t)**3
     return T, ndens
 
-##############################################################################
-# The following is the Yu Temperature and Density Model
-###############################################################################
 
 def YuT(t, dens, T0 = 3800, gamma = 4 / 3,
         t0 = 100, t6 = 63.31):
@@ -57,8 +50,48 @@ def YuT(t, dens, T0 = 3800, gamma = 4 / 3,
     
     """
     
-    t6 /= 365.25
-    t0 /= 365.25
     T = T0 * (t / t0) ** (3 - 3 * gamma)
     ndens = dens * (t6 / t) ** 3
     return T, ndens
+
+def constantD(t,dens,T0 = 1.8e+4,gamma = 1.593, t0 = 100):
+    '''
+    This is a test of a model where the temperature decreases, but the number 
+    density is constant.
+    '''
+    T=T0 * (t / t0) ** (3 - 3 * gamma)
+
+    ndens = dens
+    return T,ndens
+
+def arrhenius(a,b,c,T,formula):
+    '''
+    Set the correct reaction rate formula for reactions contained in the 
+    reactions file. More details for each rate formula are found at 
+    http://kida.obs.u-bordeaux1.fr
+    '''
+    a *= 86400     # Convert time units from per second to per day
+
+    # Formula choosing subroutine
+    if formula==1:                    #Cosmic Ray Ionization
+        zeta = 2.0e-17                #H2 ionization rate
+        k = a * zeta
+
+    elif formula==2:                  #Photodissociation (Draine)
+        Av = 1                        #Av = visual extinction
+        k = a * np.exp(-c * Av)
+
+    elif formula==3:                  #Modified Arrhenius
+        k = a * (T/300) ** b * np.exp(-c / T)
+
+    elif formula==4:                  #ionpol 1   
+        k = a * b * (0.62+0.4767 * c * np.sqrt(300. / T))
+
+    elif formula==5:                  #ionpol 2
+        k = a * b * (1 + 0.0967 * c * np.sqrt(300. / T) \
+                     + (300 * c ** 2) / (10.526 * T))
+    else:
+        exit("Unknown formula, please check the input reactions file \
+              for possible corruption")
+
+    return k

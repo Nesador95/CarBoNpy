@@ -11,87 +11,82 @@ This file is part of CarBoN
 import pandas as pd
 import configparser as cp
 
-"""
-This function reads in a KIDA reactions and species file using Pandas.
-Column names and widths are provided by KIDA.
+def KIDA_input(reac_file,spec_file):
+    '''
+    Read in a KIDA (https://kida.obs.u-bordeaux1.fr) formatted reactions 
+    and species files.
 
-Outputs:  
+    Each species in the system is indexed by number, and the output dataframe 
+    replaces the species name with the appropriate number.
 
-reactions - dataframe for all reactions in the network
-speciesidx - dictionary of species name and index
-speciesmass - dictionary of species name and mass*
-numspecies - Total number of chemical species + a "catchall" zero.
-
-
-*Mass is calculated per atom, i.e. O2 has a mass of 2
-and Si2O2 has a mass of 4. 
-
-Big Thanks to: 
-http://stackoverflow.com/questions/40663510/pandas-read-fwf-ignoring-values
-
-"""
-##############################################################################
-# The following loads the imput from a KIDA file
-##############################################################################
-
-def KIDA_reac(reac_file):
+    Inputs: KIDA-supplied reactions file
+            KIDA-supplied species file
     
-    colwidths=[11,23,11,10,35,10,11,11,9,9,6,3,8,6,4,4,3,2]
+    Outputs: Dataframe for reactions including Arhennius coefficients
+             Dataframe for species (including 'mass' term)*
 
-    reac_df = pd.read_fwf(reac_file, comment='#', widths=colwidths)
-    reac_df.rename(columns={"Type": "Type of uncertainty",
-                       "Re": "itype",
-                       "Tlo": "T low",
-                       "Thi": "T high",
-                       "Fo": "Formula",
-                       "N": "Number",
-                       "V": "Number of",
-                       "R": "Recomendation"}, inplace=True)
-    return reac_df
+    *mass is currently counted in 'atoms'. This HAS to change to include
+    different masses for different atoms (later).
+ 
+    '''
 
-
-def KIDA_spec(spec_file):
-    
-    colwidths=[11,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,5]
-    
-    spec_df = pd.read_fwf(spec_file, comment='#', widths=colwidths, 
-                          header=None)
-    spec_df.columns = list(range(0,len(colwidths)))
+    reac_df = pd.read_fwf(reac_file, comment='#')
+    spec_df = pd.read_fwf(spec_file, comment='#', header=None)
     
     col_list=list(spec_df)
-
-    spec_df['#_of_atoms'] = spec_df[col_list[2:24]].sum(axis=1)
+    spec_df['atom_num'] = spec_df[col_list[2:24]].sum(axis=1)
     spec_df = spec_df.drop(col_list[2:24], axis=1)
     spec_df.rename(columns={0 : "species",
                        1 : "charge",
-                       24: "species_#"}, inplace=True)
-               
-    spec_df.at[21, 'species_#'] = 99
-    
-    return spec_df
+                       24: "species_num"}, inplace=True)
+    #spec_df.at[21, 'species_num'] = 99
 
-def KIDA_reac_com_readable(KIDA_reac, KIDA_spec):
-    KIDA_spec['pivot_column'] = [0 for i in list(KIDA_spec.index)]
     
-    series = KIDA_spec[['species','species_#','pivot_column']]
-    series = series.pivot(columns= 'pivot_column',
-             index='species',
-             values='species_#')
-    series1 = series[0]
-    series1 = series.to_dict()
+    dictionary = pd.Series(spec_df.species_num.values,
+                           index=spec_df.species).to_dict()
+
+    for column in reac_df.columns[0:5]: 
+        reac_df[column] = reac_df[column].map(dictionary)
+
+    return reac_df, spec_df, dictionary
+
+def settings():
     
-    dictionary = series1[0]
+    """ 
+    This function reads the settings specified in settings.ini 
+    """
+
+    config = cp.ConfigParser()
+    config.read('settings.ini')
     
-    KIDA_reac['Input1_id'] = KIDA_reac['Input1'].map(dictionary)
-    KIDA_reac['Input2_id'] = KIDA_reac['Input2'].map(dictionary)
-    KIDA_reac['Output1_id'] = KIDA_reac['Output1'].map(dictionary)
-    KIDA_reac['Output2_id'] = KIDA_reac['Output2'].map(dictionary)
-    KIDA_reac['Output3_id'] = KIDA_reac['Output3'].map(dictionary)
+    files = config['files']
+    model = config['model']
+    plot = config['plot']
     
-    return KIDA_reac
-##############################################################################
-# The following loads the imput from a BASIC file
-##############################################################################
+    file_format = files['format']
+    species_file = r'data/' + files['species file']
+    reactions_file = r'data/' + files['reactions file']
+    output_file = 'output/' + files['output file']
+    model_type = model['model type']
+    density = model.getfloat('density')
+    temperature = model.getfloat('temperature')
+    start_time = model.getfloat('start time')
+    end_time = model.getfloat('end time')
+    outfile = plot['outfile for plotting']
+
+    return file_format, species_file, reactions_file, output_file, model_type, density, temperature, start_time, end_time, outfile
+
+def abundances(dictionary):
+
+    """ This function reads the initial abundances of reactants supplied 
+    by the abundances.ini file 
+    """
+    
+    abund_df = pd.read_fwf('abundances.ini', comment='#')
+    abund_df['Species'] = abund_df['Species'].map(dictionary)
+            
+    return abund_df
+
 
 def basic_input(reac_file,spec_file):
     """
@@ -106,7 +101,7 @@ def basic_input(reac_file,spec_file):
 
     Name Mass Index
 
-    This probably needs more documentation. 
+    This probably needs more documentation, and can likely be depreciated?
 
     """
     speciesidx={}
@@ -131,10 +126,6 @@ def basic_input(reac_file,spec_file):
     
     return reactions,speciesidx,speciesmass,numspecies
 
-##############################################################################
-# The following prints the entire list straight from pandas
-##############################################################################
-
 def print_full(x):
     """
     This function prints the entire Pandas dataframe to test. 
@@ -152,47 +143,4 @@ def print_full(x):
     pd.reset_option('display.max_columns')
     pd.reset_option('display.expand_frame_repr')
 
-##############################################################################
-# The following reads the settings file
-##############################################################################
 
-def settings():
-    
-    """ This function reads the settings specified in settings.ini """
-
-    config = cp.ConfigParser()
-    config.read('settings.ini')
-    
-    files = config['files']
-    model = config['model']
-    plot = config['plot']
-    
-    file_format = files['format']
-    species_file = r'data/' + files['species file']
-    reactions_file = r'data/' + files['reactions file']
-    output_file = 'output/' + files['output file']
-    model_type = model['model type']
-    density = model.getfloat('density')
-    temperature = model.getfloat('temperature')
-    start_time = model.getfloat('start time')
-    end_time = model.getfloat('end time')
-    outfile = plot['outfile for plotting']
-
-    return file_format, species_file, reactions_file, output_file, model_type, density, temperature, start_time, end_time, outfile
-
-##############################################################################
-# The following reads the abundances file
-##############################################################################
-
-def abundances():
-
-    """ This function reads the abundances.ini file """
-    
-    initial = {}
-    with open('abundances.ini','r') as my_file:
-        header = my_file.readline()
-        for line in my_file:
-            columns = line.strip().split()
-            initial[columns[0]] = float(columns[1])
-            
-    return initial
