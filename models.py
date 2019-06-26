@@ -59,6 +59,8 @@ def constantD(t,dens,T0 = 1.8e+4,gamma = 1.593, t0 = 100):
     This is a test of a model where the temperature decreases, but the number 
     density is constant.
     '''
+    t /= 86400
+
     T=T0 * (t / t0) ** (3 - 3 * gamma)
 
     ndens = dens
@@ -70,7 +72,7 @@ def arrhenius(a,b,c,T,formula):
     reactions file. More details for each rate formula are found at 
     http://kida.obs.u-bordeaux1.fr
     '''
-    a *= 86400     # Convert time units from per second to per day
+    #a *= 86400     # Convert time units from per second to per day
 
     # Formula choosing subroutine
     if formula==1:                    #Cosmic Ray Ionization

@@ -65,6 +65,9 @@ def chemnet(t,y):
 
     f=np.zeros([len(kida_spec.index)]) # Define the rhs array
 
+    #f -= 3*y/t
+
+
     for num in range(count):
         
         in1=kida_reac.loc[num]['Input1']
@@ -81,13 +84,13 @@ def chemnet(t,y):
             print('Still going! t={0}, Temp={1}'.format(t,T))
 
         if in2!=0 and in2!=99:
-            f[in1]  -=  Ndens*m.arrhenius(alpha,beta,gamma,T,fo) * y[in1] * y[in2]
-            f[in2]  -=  Ndens*m.arrhenius(alpha,beta,gamma,T,fo) * y[in1] * y[in2]
-            f[out1] +=  Ndens*m.arrhenius(alpha,beta,gamma,T,fo) * y[in1] * y[in2]           
+            f[in1]  -=  m.arrhenius(alpha,beta,gamma,T,fo) * y[in1] * y[in2]
+            f[in2]  -=  m.arrhenius(alpha,beta,gamma,T,fo) * y[in1] * y[in2]
+            f[out1] +=  m.arrhenius(alpha,beta,gamma,T,fo) * y[in1] * y[in2]           
             if np.isnan(out2) == False and out2!=0:
-                f[out2] += Ndens*m.arrhenius(alpha,beta,gamma,T,fo) * y[in1] * y[in2]
+                f[out2] += m.arrhenius(alpha,beta,gamma,T,fo) * y[in1] * y[in2]
             if np.isnan(out3) == False and out3!=0:
-                f[out3] += Ndens*m.arrhenius(alpha,beta,gamma,T,fo) * y[in1] * y[in2]  
+                f[out3] += m.arrhenius(alpha,beta,gamma,T,fo) * y[in1] * y[in2]  
 
         elif in2==0:
             f[in1] -= m.arrhenius(alpha, beta, gamma, T, fo) * y[in1]
@@ -138,13 +141,16 @@ Ndensinit = density #np.sum(yinit)*density
 Initialize Assimulo, calculate with CVode.
 '''
 
+start_time *= 86400
+end_time *= 86400
+
 model=Explicit_Problem(chemnet,yinit,start_time)
 model.name='Chemnet Test'
 
 sim=CVode(model)
 
-sim.atol=1.e-16
-sim.rtol=1.e-16
+sim.atol=1.e-12
+sim.rtol=1.e-12
 sim.maxord=3
 sim.discr='BDF'
 sim.iter='Newton'
@@ -153,19 +159,19 @@ t,y=sim.simulate(end_time)
 
 #sim.plot()
 
-plt.ylim([1e-15,1e1])
+plt.ylim([1e-2,2e8])
 plt.semilogy(t,y[:,1],label='C')
 plt.semilogy(t,y[:,2],label='O')
 plt.semilogy(t,y[:,3],label='C2')
 plt.semilogy(t,y[:,4],label='CO')
 plt.semilogy(t,y[:,5],label='C3')
 plt.semilogy(t,y[:,6],label='C4')
-plt.semilogy(t,y[:,7],label='C5')
-plt.semilogy(t,y[:,8],label='C6')
-plt.semilogy(t,y[:,9],label='C7')
-plt.semilogy(t,y[:,10],label='C8')
-plt.semilogy(t,y[:,11],label='C9')
-plt.semilogy(t,y[:,12],label='C10')
+#plt.semilogy(t,y[:,7],label='C5')
+#plt.semilogy(t,y[:,8],label='C6')
+#plt.semilogy(t,y[:,9],label='C7')
+#plt.semilogy(t,y[:,10],label='C8')
+#plt.semilogy(t,y[:,11],label='C9')
+#plt.semilogy(t,y[:,12],label='C10')
 
 plt.legend()
 plt.show()
