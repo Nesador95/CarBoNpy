@@ -6,23 +6,29 @@ Copyright (c) 2012-2016 Ethan Deneault
 This file is part of CarBoN
 
 ''' 
-
-from scipy.integrate import odeint
+import numpy as np
+import matplotlib.pyplot as plt
+from assimulo.problem import Explicit_Problem
+from assimulo.solvers import CVode
 from sys import exit
 
-import datainput
-import models
-import numpy as np
 
-file_format, species_file, reactions_file, output_file, model_type, density, Tinit, start_time, end_time, outfile = datainput.settings()
-initial_abundances = datainput.abundances()
-print(initial_abundances)
-##############################################################################
-# The Following code reads the data files in KIDA format and BASIC format 
-##############################################################################
-kida_reac = datainput.KIDA_reac(reactions_file)
-kida_spec = datainput.KIDA_spec(species_file)
-kida_reac = datainput.KIDA_reac_com_readable(kida_reac,kida_spec)
+import datainput as d
+import models as m
+
+
+"""
+Import data from the settings file, the KIDA database files and the initial abundances file. 
+"""
+
+file_format, species_file, reactions_file, output_file, model_type, density, Tinit, start_time, end_time, outfile = d.settings()
+
+kida_reac,kida_spec,dictionary = d.KIDA_input(reactions_file,species_file)
+
+
+abund_df = d.abundances(dictionary)
+
+
 
 """
 This list contains the monoatomic molecules that result from the use of 'M' 
@@ -33,159 +39,140 @@ C, O, Si
 monoatomic_list = [1, 2, 22]
 
 
-
 count=len(list(kida_reac.index))
 
 
 
+def chemnet(t,y):
+    '''
+    This function defines the rhs of the system of differential equations used in the chemical 
+    network. It dynamically builds the equations from reading the reactions file, and defines the Arrhenius 
+    coefficients from the coefficients given per reaction. The temperature model_type must be assigned to 
+    either 'CD' or 'Yu'. 
+    '''
 
-##############################################################################
-# The following are functions that determine the reaction coefficients 
-# for each reaction.
-##############################################################################
-
-def arrhenius(a,b,c,T,formula):
-    a *= 3.154e+7     # Convert units to year**-1
-
-    # Formula choosing subroutine (from KIDA data set)
-    if formula==1:                    #Cosmic Ray Ionization
-        zeta = 2.0e-17                    #H2 ionization rate
-        k = a * zeta
-
-    elif formula==2:                  #Photodissociation (Draine)
-        Av = 1                        #Av = visual extinction
-        k = a * np.exp(-c * Av)
-
-    elif formula==3:                  #Modified Arrhenius
-        k = a * (T/300) ** b * np.exp(-c / T)
-
-    elif formula==4:                  #ionpol 1   
-        k = a * b * (0.62+0.4767 * c * np.sqrt(300. / T))
-
-    elif formula==5:                  #ionpol 2
-        k = a * b * (1 + 0.0967 * c * np.sqrt(300. / T) \
-        + (300 * c ** 2) / (10.526 * T))
-    else:
-        exit("Unknown Formula!")
-
-    return k
-
-##############################################################################
-# The following code builds the chemical network
-##############################################################################
-
-def chemnet(y,t):
-    f=np.zeros([len(kida_spec.index)])
- 
-# Model Selection for T(t) and n(t)
     if model_type=='CD':
-        T,Ndens=models.cherchneffT(y,t,kida_spec['species_#'].to_dict(),
-                                   kida_spec['#_of_atoms'].to_dict(),
+        T,Ndens=m.cherchneffT(y,t,kida_spec['species_num'].to_dict(),
+                                   kida_spec['atom_num'].to_dict(),
                                    dens=Ndensinit,
                                    T0=Tinit)
     elif model_type=='Yu':
-        T,Ndens=models.YuT(t,dens=Ndensinit,T0=Tinit)
+        T,Ndens=m.YuT(t,dens=Ndensinit,T0=Tinit)
+    elif model_type=='Cons':
+        T,Ndens=m.constantD(t,dens=Ndensinit,T0=Tinit)
     else:
         exit("No Model Loaded, Exiting Now.")
 
+    f=np.zeros([len(kida_spec.index)]) # Define the rhs array
+
     for num in range(count):
         
-        in1=kida_reac.loc[num]['Input1_id']
-        in2=kida_reac.loc[num]['Input2_id']
-        out1=kida_reac.loc[num]['Output1_id']
-        out2=kida_reac.loc[num]['Output2_id']
-        out3=kida_reac.loc[num]['Output3_id']     
+        in1=kida_reac.loc[num]['Input1']
+        in2=kida_reac.loc[num]['Input2']
+        out1=kida_reac.loc[num]['Output1']
+        out2=kida_reac.loc[num]['Output2']
+        out3=kida_reac.loc[num]['Output3']     
         alpha=kida_reac.loc[num]['alpha']
         beta=kida_reac.loc[num]['beta']
         gamma=kida_reac.loc[num]['gamma']
-        fo=kida_reac.loc[num]['Formula']
+        fo=kida_reac.loc[num]['Fo']
 
         if num==0:
             print('Still going! t={0}, Temp={1}'.format(t,T))
 
-        if in2!=0 and in2!=99 :
-            f[in1] -=  arrhenius(alpha,beta,gamma,T,fo) \
-                      * y[in1] * y[in2]
-            f[in2] -=  arrhenius(alpha,beta,gamma,T,fo) \
-                      * y[in1] * y[in2]
-            f[out1] +=   arrhenius(alpha,beta,gamma,T,fo) \
-                       * y[in1] * y[in2]           
-            if isinstance(out2,int) == True:
-                f[out2] +=  arrhenius(alpha,beta,gamma,T,fo) \
-                       * y[in1] * y[in2]
-            if isinstance(out3,int) == True:
-                f[out3] += arrhenius(alpha,beta,gamma,T,fo) \
-                           * y[in1] * y[in2]
-        elif in2==99:
-            f[in1] -=  arrhenius(alpha,beta,gamma,T,fo) \
-                      * y[in1] * (kida_spec.loc[0]['species_#']\
-                         + kida_spec.loc[2]['species_#'] \
-                      + monoatomic_list[2])
-            f[out1] +=  arrhenius(alpha,beta,gamma,T,fo) \
-                       * y[in1] * (kida_spec.loc[0]['species_#'] + kida_spec.loc[1]['species_#'] \
-                       + monoatomic_list[2])
-            if isinstance(out2,int) == True:
-                f[out2] += arrhenius(alpha,beta,gamma,T,fo) * y[in1] \
-                       * (kida_spec.loc[0]['species_#'] + kida_spec.loc[1]['species_#'] \
-                       + monoatomic_list[2])
-            if isinstance(out3,int) == True:
-                f[out3] += arrhenius(alpha,beta,gamma,T,fo) * y[in1] \
-                        * (kida_spec.loc[0]['species_#'] + kida_spec.loc[1]['species_#'] \
-                       + monoatomic_list[2])
+        if in2!=0 and in2!=99:
+            f[in1]  -=  Ndens*m.arrhenius(alpha,beta,gamma,T,fo) * y[in1] * y[in2]
+            f[in2]  -=  Ndens*m.arrhenius(alpha,beta,gamma,T,fo) * y[in1] * y[in2]
+            f[out1] +=  Ndens*m.arrhenius(alpha,beta,gamma,T,fo) * y[in1] * y[in2]           
+            if np.isnan(out2) == False and out2!=0:
+                f[out2] += Ndens*m.arrhenius(alpha,beta,gamma,T,fo) * y[in1] * y[in2]
+            if np.isnan(out3) == False and out3!=0:
+                f[out3] += Ndens*m.arrhenius(alpha,beta,gamma,T,fo) * y[in1] * y[in2]  
 
         elif in2==0:
-            f[in1] -= arrhenius(alpha, beta, gamma, T, fo) * y[in1]
-            f[out1] += arrhenius(alpha, beta, gamma, T, fo) * y[in1]
-            if isinstance(out2,int) == True:
-                f[out2] += arrhenius(alpha, beta, gamma, T, fo) * y[in1]
-            if isinstance(out3,int) == True:
-                f[out3] += arrhenius(alpha, beta, gamma, T, fo) * y[in1]
+            f[in1] -= m.arrhenius(alpha, beta, gamma, T, fo) * y[in1]
+            f[out1] += m.arrhenius(alpha, beta, gamma, T, fo) * y[in1]
+            if np.isnan(out2) == False and out2!=0:
+                f[out2] += m.arrhenius(alpha, beta, gamma, T, fo) * y[in1]
+            if np.isnan(out3) == False and out3!=0:
+                f[out3] += m.arrhenius(alpha, beta, gamma, T, fo) * y[in1]
+
+########### Reactions with moderators needs rewrite!
+# 
+#        elif in2==99:
+#            f[in1] -=  Ndens*m.arrhenius(alpha,beta,gamma,T,fo) \
+#                      * y[in1] * (kida_spec.loc[0]['species_num']\
+#                         + kida_spec.loc[2]['species_num'] \
+#                      + monoatomic_list[2])
+#            f[out1] +=  Ndens*m.arrhenius(alpha,beta,gamma,T,fo) \
+#                       * y[in1] * (kida_spec.loc[0]['species_num'] + kida_spec.loc[1]['species_#'] \
+#                       + monoatomic_list[2])
+#            if isinstance(out2,int) == True:
+#                f[out2] += Ndens*m.arrhenius(alpha,beta,gamma,T,fo) * y[in1] \
+#                       * (kida_spec.loc[0]['species_num'] + kida_spec.loc[1]['species_#'] \
+#                       + monoatomic_list[2])
+#            if isinstance(out3,int) == True:
+#                f[out3] += Ndens*m.arrhenius(alpha,beta,gamma,T,fo) * y[in1] \
+#                        * (kida_spec.loc[0]['species_num'] + kida_spec.loc[1]['species_#'] \
+#                       + monoatomic_list[2])
+############ NEEDS CLEANUP
+
     return f
 
-##############################################################################
-# The following code sets the time steps
-##############################################################################
+'''
+Initialize the variables
+'''
 
-time = np.linspace(start_time/365.25,end_time/365.25,1000000)
+yinit = np.zeros([len(kida_spec.index)])     
+yinit[abund_df.Species.values] = abund_df.Abundance.values 
 
-##############################################################################
-# The following are the initial values
-##############################################################################
+print(yinit)
 
-yinit = np.zeros([len(kida_spec.index)]) 
-                           
-for species,abund in initial_abundances.items():
-    yinit[int(species)] = abund
-    print(species,abund,yinit)
-
-         
 Ndensinit = density #np.sum(yinit)*density
 
-#print('Ndensinit = {}'.format(Ndensinit))
+#testchem=chemnet(start_time,yinit)
 
 #exit()
 
-##############################################################################
-# The following initializes LSODA
-##############################################################################
+'''
+Initialize Assimulo, calculate with CVode.
+'''
 
-y = odeint(chemnet, yinit, time, 
-           mxstep=5000000, rtol=1e-13, atol=1e-13)
+model=Explicit_Problem(chemnet,yinit,start_time)
+model.name='Chemnet Test'
 
-##############################################################################
-# The following plots the final abundances
-##############################################################################
+sim=CVode(model)
 
-abundance=[]
+sim.atol=1.e-16
+sim.rtol=1.e-16
+sim.maxord=3
+sim.discr='BDF'
+sim.iter='Newton'
 
-for i in range(len(kida_spec.index)):
-    abundance.append(y[-1,i])
+t,y=sim.simulate(end_time)
 
-print(abundance)
+#sim.plot()
+
+plt.ylim([1e-15,1e1])
+plt.semilogy(t,y[:,1],label='C')
+plt.semilogy(t,y[:,2],label='O')
+plt.semilogy(t,y[:,3],label='C2')
+plt.semilogy(t,y[:,4],label='CO')
+plt.semilogy(t,y[:,5],label='C3')
+plt.semilogy(t,y[:,6],label='C4')
+plt.semilogy(t,y[:,7],label='C5')
+plt.semilogy(t,y[:,8],label='C6')
+plt.semilogy(t,y[:,9],label='C7')
+plt.semilogy(t,y[:,10],label='C8')
+plt.semilogy(t,y[:,11],label='C9')
+plt.semilogy(t,y[:,12],label='C10')
+
+plt.legend()
+plt.show()
 
 ##############################################################################
 # The following writes to a data file
 ##############################################################################
-
-np.savez(output_file,time=time,speciesidx=kida_spec['species_#'].to_dict(), y = y,
-         abundance=abundance,speciesmass=kida_spec['#_of_atoms'].to_dict())
+#
+#np.savez(output_file,time=time,speciesidx=kida_spec['species_num'].to_dict(), y = y,
+#         abundance=abundance,speciesmass=kida_spec['atoms_num'].to_dict())
