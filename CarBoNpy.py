@@ -23,11 +23,9 @@ Import data from the settings file, the KIDA database files and the initial abun
 
 file_format, species_file, reactions_file, output_file, model_type, density, Tinit, start_time, end_time, outfile = d.settings()
 
-kida_reac,kida_spec,dictionary = d.KIDA_input(reactions_file,species_file)
+kida_reac,kida_spec,spec_dict = d.KIDA_input(reactions_file,species_file)
 
-
-abund_df = d.abundances(dictionary)
-
+abund_df = d.abundances(spec_dict)
 
 
 """
@@ -166,12 +164,12 @@ plt.semilogy(t,y[:,3],label='C2')
 plt.semilogy(t,y[:,4],label='CO')
 plt.semilogy(t,y[:,5],label='C3')
 plt.semilogy(t,y[:,6],label='C4')
-#plt.semilogy(t,y[:,7],label='C5')
-#plt.semilogy(t,y[:,8],label='C6')
-#plt.semilogy(t,y[:,9],label='C7')
-#plt.semilogy(t,y[:,10],label='C8')
-#plt.semilogy(t,y[:,11],label='C9')
-#plt.semilogy(t,y[:,12],label='C10')
+plt.semilogy(t,y[:,7],label='C5')
+plt.semilogy(t,y[:,8],label='C6')
+plt.semilogy(t,y[:,9],label='C7')
+plt.semilogy(t,y[:,10],label='C8')
+plt.semilogy(t,y[:,11],label='C9')
+plt.semilogy(t,y[:,12],label='C10')
 
 plt.legend()
 plt.show()
