@@ -22,15 +22,20 @@ def KIDA_input(reac_file,spec_file):
     Inputs: KIDA-supplied reactions file
             KIDA-supplied species file
     
-    Outputs: Dataframe for reactions including Arhennius coefficients
-             Dataframe for species (including 'mass' term)*
-
-    *mass is currently counted in 'atoms'. This HAS to change to include
-    different masses for different atoms (later).
+    Outputs: Dataframe for reactions
+             Dataframe for species -> dictionary for assigning species to 
+                                      a row in the solution matrix. 
  
     '''
+    reac_col_names=['Input1','Input2','Output1','Output2','Output3',
+                    'alpha','beta','gamma','F','g','Type','Re','Tlo', 
+                    'Thi','Fo','N','V','R']
+    reac_df = pd.read_fwf(reac_file, comment='#', header=None,
+                          names=reac_col_names)
+    
+    
 
-    reac_df = pd.read_fwf(reac_file, comment='#')
+
     spec_df = pd.read_fwf(spec_file, comment='#', header=None)
     
     col_list=list(spec_df)
@@ -39,16 +44,20 @@ def KIDA_input(reac_file,spec_file):
     spec_df.rename(columns={0 : "species",
                        1 : "charge",
                        24: "species_num"}, inplace=True)
-    #spec_df.at[21, 'species_num'] = 99
+    #spec_df.loc[spec_df.species == 'e-', 'species_num'] = 0
 
-    
-    dictionary = pd.Series(spec_df.species_num.values,
+    spec_dict = pd.Series(spec_df.species_num.values,
                            index=spec_df.species).to_dict()
+    add_photons={'Photon':0,'Pho':0}
+    spec_dict.update(add_photons)
 
     for column in reac_df.columns[0:5]: 
-        reac_df[column] = reac_df[column].map(dictionary)
+        reac_df[column] = reac_df[column].replace(spec_dict)
+        reac_df[column] = reac_df[column].astype('Int64')
 
-    return reac_df, spec_df, dictionary
+    print(reac_df.dtypes)
+
+    return reac_df, spec_df, spec_dict
 
 def settings():
     
