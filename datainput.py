@@ -10,6 +10,8 @@ This file is part of CarBoN
 
 import pandas as pd
 import configparser as cp
+from sys import exit
+
 
 def KIDA_input(reac_file,spec_file):
     '''
@@ -30,15 +32,18 @@ def KIDA_input(reac_file,spec_file):
     reac_col_names=['Input1','Input2','Output1','Output2','Output3',
                     'alpha','beta','gamma','F','g','Type','Re','Tlo', 
                     'Thi','Fo','N','V','R']
-    reac_df = pd.read_fwf(reac_file, comment='#', header=None,
-                          names=reac_col_names)
-    
-    
+    reac_col_widths=[11,23,11,11,34,11,11,11,9,9,5,3,7,7,3,5,2,3]
+    reac_dtypes={'Input1':str,'Input2':str,'Output1':str,'Output2':str,
+                 'Output3':str}
 
+    reac_df = pd.read_fwf(reac_file, comment='#', header=None,
+                          names=reac_col_names,widths=reac_col_widths,
+                          converters=reac_dtypes)
 
     spec_df = pd.read_fwf(spec_file, comment='#', header=None)
-    
+
     col_list=list(spec_df)
+
     spec_df['atom_num'] = spec_df[col_list[2:24]].sum(axis=1)
     spec_df = spec_df.drop(col_list[2:24], axis=1)
     spec_df.rename(columns={0 : "species",
@@ -51,6 +56,8 @@ def KIDA_input(reac_file,spec_file):
     add_photons={'Photon':0,'Pho':0}
     spec_dict.update(add_photons)
 
+    print(spec_dict)
+
     for column in reac_df.columns[0:5]: 
         reac_df[column] = reac_df[column].replace(spec_dict)
         reac_df[column] = reac_df[column].astype('Int64')
@@ -58,6 +65,7 @@ def KIDA_input(reac_file,spec_file):
     print(reac_df.dtypes)
 
     return reac_df, spec_df, spec_dict
+
 
 def settings():
     
