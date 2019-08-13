@@ -69,11 +69,13 @@ def constantD(t,dens,T0 = 1.8e+4,gamma = 1.593, t0 = 100):
 def arrhenius(a,b,c,T,formula):
     '''
     Set the correct reaction rate formula for reactions contained in the 
-    reactions file. More details for each rate formula are found at 
+    reactions file. More details for rate formulas 1-5 are found at 
     http://kida.obs.u-bordeaux1.fr
+    
+    Formula 6 is defined as f*K for grains. Van der Waals corrections are 
+    added in Chemnet
     '''
-    #a *= 86400     # Convert time units from per second to per day
-
+    
     # Formula choosing subroutine
     if formula==1:                    #Cosmic Ray Ionization
         zeta = 2.0e-17                #H2 ionization rate
@@ -97,3 +99,29 @@ def arrhenius(a,b,c,T,formula):
               for possible corruption")
 
     return k
+
+def VdW(radius1,radius2,T,A,k=1.38e-23):
+    """
+    This function calculates the van der Waals correction factor for the coagulation 
+    of grains of radius1 and radius2. 
+
+    Input: Radii of grains 1 and 2, temperature, Hamaker constant. 
+    Output: VdW correction coefficient. 
+
+    We define the reduced Hamaker coefficient based on the work of Sarangi & 
+    Cherchneff (2015) (who follow Sceats (1989)). See the derivation paperwork. 
+
+    RT is the maximal real root of the polynomial equation from Sceats: 
+    d/dr(V(r)-2kT ln(r))=0
+
+    """
+    a = radius1+radius2
+    A_red = (1/(3*k*T))*A*radius1*radius2*a**4
+    b = np.polynomial.Polynomial([-1*A_red,0,a**4,0,-2*a**2,0,1]).roots()
+    RT = b[(b.imag==0) & (b.real>=0)].real.max()
+    V = -(A/3)*radius1*radius2/a**2*(1/((RT/a)**2-1) + \
+                                             1/(RT/a)**2 + \
+                                             2*np.log(1-(a/RT)**2))
+    W = (RT/a)**2*np.exp(-V/(k*T))
+
+    return W
