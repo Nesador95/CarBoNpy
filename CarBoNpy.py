@@ -24,21 +24,14 @@ def chemnet(t,y):
     the DataFrame constructed by m.KIDA_Input()
     '''
 
-    if model_type=='CD':
-        T,Ndens=m.cherchneffT(y,t,kida_spec['species_num'].to_dict(),
-                                   kida_spec['atom_num'].to_dict(),
-                                   dens=Ndensinit,
-                                   T0=Tinit)
-    elif model_type=='Yu':
-        T,Ndens=m.YuT(t,dens=Ndensinit,T0=Tinit)
-    elif model_type=='Cons':
+    if model_type=='Cons':
         T,Ndens=m.constantD(t,dens=Ndensinit,T0=Tinit)
     else:
         exit("No Model Loaded, Exiting Now.")
 
-    f=np.zeros([len(kida_spec.index)]) # Define the rhs array
+    f=np.zeros([len(kida_spec.index)+len(grain_spec.index)]) # Define the rhs array
 
-    #f -= 3*y/t
+    f -= 3*y/t
 
 
     for num in range(len(list(kida_reac.index))):
@@ -56,13 +49,8 @@ def chemnet(t,y):
         if num==0:
             print('Still going! t={0}, Temp={1}'.format(t,T))
 
-        if fo==6:
-            f[in1] -= beta * np.sqrt(T) * m.VdW(r1,r2,T,gamma)
-            f[in2] -= beta * np.sqrt(T) * m.VdW(r1,r2,T,gamma)
-            f[out1] += alpha * beta * np.sqrt(T) * m.VdW(r1,r2,T,gamma)
-            f[out2] += (1-alpha) * beta * np.sqrt(T) * m.VdW(r1,r2,T,gamma)
-
-        elif fo!=6 and in2!=0 and in2!=99:
+        
+        elif in2!=0 and in2!=99:
             f[in1]  -=  m.arrhenius(alpha,beta,gamma,T,fo) * y[in1] * y[in2]
             f[in2]  -=  m.arrhenius(alpha,beta,gamma,T,fo) * y[in1] * y[in2]
             f[out1] +=  m.arrhenius(alpha,beta,gamma,T,fo) * y[in1] * y[in2]
@@ -71,13 +59,31 @@ def chemnet(t,y):
             if np.isnan(out3) == False and out3!=0:
                 f[out3] += m.arrhenius(alpha,beta,gamma,T,fo) * y[in1] * y[in2]
 
-        elif fo!=6 and in2==0:
+        elif in2==0:
             f[in1] -= m.arrhenius(alpha, beta, gamma, T, fo) * y[in1]
             f[out1] += m.arrhenius(alpha, beta, gamma, T, fo) * y[in1]
             if np.isnan(out2) == False and out2!=0:
                 f[out2] += m.arrhenius(alpha, beta, gamma, T, fo) * y[in1]
             if np.isnan(out3) == False and out3!=0:
                 f[out3] += m.arrhenius(alpha, beta, gamma, T, fo) * y[in1]
+
+    for num in range(len(list(grains_reac.index))):
+
+        in1=grains_reac.loc[num]['Input1']
+        in2=grains_reac.loc[num]['Input2']
+        out1=grains_reac.loc[num]['Output1']
+        out2=grains_reac.loc[num]['Output2']     
+        fijk=kida_reac.loc[num]['f_ijk']
+        kij=kida_reac.loc[num]['K_ij']
+        Hamaker=kida_reac.loc[num]['Hamaker']
+        fo=kida_reac.loc[num]['Fo']
+
+        f[in1] -= kij * np.sqrt(T) * m.VdW(r1,r2,T,Hamaker)
+        f[in2] -= kij * np.sqrt(T) * m.VdW(r1,r2,T,Hamaker)
+        f[out1] += fijk * kij * np.sqrt(T) * m.VdW(r1,r2,T,Hamaker)
+        f[out2] += (1-fijk) * kij * np.sqrt(T) * m.VdW(r1,r2,T,Hamaker)
+
+
 
 ########### Reactions with moderators needs rewrite!
 # 
@@ -106,9 +112,12 @@ def chemnet(t,y):
 Import data from the settings file, the KIDA database files and the initial abundances file. 
 """
 
-file_format, species_file, reactions_file, output_file, model_type, density, Tinit, start_time, end_time, outfile = d.settings()
+# This is to read files from whatever they are stored in. 
 
-kida_reac,kida_spec,spec_dict = d.KIDA_input(reactions_file,species_file)
+
+file_format, MODEL_FILE, model_type, density, Tinit, start_time, end_time, outfile = d.settings()
+
+kida_reac, kida_spec, spec_dict, grains_reac = READ?(MODEL_FILE)
 
 abund_df = d.abundances(spec_dict)
 
