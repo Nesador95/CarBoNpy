@@ -12,6 +12,7 @@ class Grains:
         self.A = Hamaker
         self.p = density
         self.rows_list = []
+        self.spec_list=[]
         self.num = num
     def _create_bins(self): 
         self.numbins = int(np.ceil(1+np.log((self.r_max/self.r_min)**3)/np.log(self.R)))
@@ -33,17 +34,30 @@ class Grains:
         return rij,vij,Kij,bin_num,fraction,fraction2
     def _create_reac_df(self):
         self._create_bins()
-        for i in np.arange(1,self.numbins):
+        for i in np.arange(1,self.numbins-1):
             for j in np.arange(1,i+1):
                 rij,vij,Kij,bin_num,fraction,fraction2=self._create_coeffs(self.r,self.v,\
                                                                            self.m,i,j,self.R)
-                reac_coeffs=[i+self.num,j+self.num,bin_num+self.num,bin_num+self.num+1,\
-                             fraction2,Kij,self.A,self.r[i],self.r[j],6]
+                in1=i+self.num
+                in2=j+self.num
+                out1=bin_num+self.num
+                if bin_num+self.num+1>self.numbins:
+                    out2=bin_num+self.num
+                else:
+                    out2=bin_num+self.num+1
+                reac_coeffs=[in1,in2,out1,out2,fraction2,Kij,self.A,self.r[i],self.r[j],6]
                 reac_row={k:v for k,v in zip(self.column_names,reac_coeffs)}
                 self.rows_list.append(reac_row)
+    def _create_spec_df(self):
+        self.spec_names=["species","charge","species_num","mass"]
+        for i in np.arange(1,self.numbins):
+            spec_coeffs = ["G"+str(i),0,i+self.num,self.m[i]]
+            spec_row = {k:v for k,v in zip(self.spec_names,spec_coeffs)}
+            self.spec_list.append(spec_row)
     def output(self):
         self._create_reac_df()
-        return pd.DataFrame(self.rows_list,columns=self.column_names)
+        self._create_spec_df()
+        return pd.DataFrame(self.rows_list,columns=self.column_names), pd.DataFrame(self.spec_list,columns=self.spec_names)
 
 #
 
@@ -113,16 +127,16 @@ K.read_species()
 K.read_reactions()
 reactions, species, dictionary = K.output()
 
-print(reactions)
-print(species)
-print(dictionary)
+#print(reactions)
+#print(species)
+#print(dictionary)
 
 g=Grains(1e-11,1e-6,2,2e-20,2.3,K.num_species)
 
 
 
-grain_reacs = g.output()
+grain_reacs, grain_spec = g.output()
 
 print(grain_reacs)
-
+print(grain_spec)
 
