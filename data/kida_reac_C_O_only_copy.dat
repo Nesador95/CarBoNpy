@@ -1,4 +1,4 @@
-Input1     Input2                 Output1    Output2    Output3                            alpha     beta       gamma      F        g        Type  Re Tlo     Thi   Fo   N  V  R
+#Input1     Input2                 Output1    Output2    Output3                            alpha     beta       gamma      F        g        Type  Re Tlo     Thi   Fo   N  V  R
 ## Carbon
 C          C                      C2         Photon                                        4.360e-18  0.350e+00  1.613e+02 1.00e+01 0.00e+00 logn  6     10    280  3    92 1  1
 C          CO                     C2         O                                             5.430e-07 -1.500e+00  5.720e+04 1.00e+01 0.00e+00 logn  6     10    280  3    23 2  1

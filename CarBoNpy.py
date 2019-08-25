@@ -12,7 +12,7 @@ from assimulo.problem import Explicit_Problem
 from assimulo.solvers import CVode
 from sys import exit
 
-
+import CarBoN_Input_Processor as cip 
 import datainput as d
 import models as m
 
@@ -25,11 +25,11 @@ def chemnet(t,y):
     '''
 
     if model_type=='Cons':
-        T,Ndens=m.constantD(t,dens=Ndensinit,T0=Tinit)
+        T,Ndens=m.constantD(t,dens=Ndensinit,T0=temperature)
     else:
         exit("No Model Loaded, Exiting Now.")
 
-    f=np.zeros([len(kida_spec.index)+len(grain_spec.index)]) # Define the rhs array
+    f=np.zeros([len(kida_spec.index)]) # Define the rhs array
 
     f -= 3*y/t
 
@@ -65,8 +65,10 @@ def chemnet(t,y):
             if np.isnan(out2) == False and out2!=0:
                 f[out2] += m.arrhenius(alpha, beta, gamma, T, fo) * y[in1]
             if np.isnan(out3) == False and out3!=0:
-                f[out3] += m.arrhenius(alpha, beta, gamma, T, fo) * y[in1]
+                f[out3] += m.arrhenius(alpha, beta, gamma, T, fo) * y[in1]           
+    return f
 
+'''
     for num in range(len(list(grains_reac.index))):
 
         in1=grains_reac.loc[num]['Input1']
@@ -82,7 +84,7 @@ def chemnet(t,y):
         f[in2] -= kij * np.sqrt(T) * m.VdW(r1,r2,T,Hamaker)
         f[out1] += fijk * kij * np.sqrt(T) * m.VdW(r1,r2,T,Hamaker)
         f[out2] += (1-fijk) * kij * np.sqrt(T) * m.VdW(r1,r2,T,Hamaker)
-
+'''
 
 
 ########### Reactions with moderators needs rewrite!
@@ -105,8 +107,6 @@ def chemnet(t,y):
 #                       + monoatomic_list[2])
 ############ NEEDS CLEANUP
 
-    return f
-
 
 """
 Import data from the settings file, the KIDA database files and the initial abundances file. 
@@ -115,9 +115,14 @@ Import data from the settings file, the KIDA database files and the initial abun
 # This is to read files from whatever they are stored in. 
 
 
-file_format, MODEL_FILE, model_type, density, Tinit, start_time, end_time, outfile = d.settings()
+file_format, species_file, reactions_file, output_file, model_type, density, temperature, start_time, end_time, outfile = d.settings()
 
-kida_reac, kida_spec, spec_dict, grains_reac = READ?(MODEL_FILE)
+
+Kida_file = cip.Kida(r"data\kida_reac_C_O_Si_only.dat", r"data\kida_spec_C_O_Si_only.dat")
+Kida_file.read_species()
+Kida_file.read_reactions()
+
+kida_reac, kida_spec, spec_dict = Kida_file.output() 
 
 abund_df = d.abundances(spec_dict)
 
@@ -131,6 +136,7 @@ yinit[abund_df.Species.values] = abund_df.Abundance.values
 print(yinit)
 
 Ndensinit = density #np.sum(yinit)*density
+
 
 """
 Initialize Assimulo, calculate with CVode.
@@ -156,14 +162,26 @@ t,y=sim.simulate(end_time)
 #sim.plot()
 
 t = np.array(t)/86400
-plt.ylim([1e1,2e8])
+plt.ylim([1e-10,2e10])
 plt.semilogy(t,y[:,1],label='C')
 plt.semilogy(t,y[:,2],label='O')
 plt.semilogy(t,y[:,3],label='C2')
 plt.semilogy(t,y[:,4],label='CO')
-plt.semilogy(t,y[:,5],label='O2')
-plt.semilogy(t,y[:,6],label='C3')
-plt.semilogy(t,y[:,7],label='C4')
+plt.semilogy(t,y[:,5],label='C3')
+plt.semilogy(t,y[:,6],label='C4')
+plt.semilogy(t,y[:,7],label='Si')
+plt.semilogy(t,y[:,8],label='SiC')
+plt.semilogy(t,y[:,9],label='SiO')
+plt.semilogy(t,y[:,10],label='Si2O2')
+plt.semilogy(t,y[:,11], "-.",label='Si2C2')
+plt.semilogy(t,y[:,12], "-.",label='O2')
+plt.semilogy(t,y[:,13], "-.",label='C+')
+plt.semilogy(t,y[:,14], "-.",label='O+')
+plt.semilogy(t,y[:,15], "-.",label='Si+')
+plt.semilogy(t,y[:,16], "-.",label='CO+')
+plt.semilogy(t,y[:,17], "-.",label='C2+')
+plt.semilogy(t,y[:,18], "-.",label='SiC+')
+plt.semilogy(t,y[:,19], "-.",label='e-')
 
 
 plt.legend()
