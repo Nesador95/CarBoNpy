@@ -118,25 +118,25 @@ class Kida:
             self._reac_df[column] = self._reac_df[column].astype('Int64')
 
 
-reac = "data/kida_reac_C_O_only.dat"
-spec = "data/kida_spec_C_O_only.dat"
+#reac = "data/kida_reac_C_O_only.dat"
+#spec = "data/kida_spec_C_O_only.dat"
 
-K=Kida(reac,spec)
+#K=Kida(reac,spec)
 
-K.read_species()
-K.read_reactions()
-reactions, species, dictionary = K.output()
+#K.read_species()
+#K.read_reactions()
+#reactions, species, dictionary = K.output()
 
 #print(reactions)
 #print(species)
 #print(dictionary)
 
-g=Grains(1e-11,1e-6,2,2e-20,2.3,K.num_species)
+#g=Grains(1e-11,1e-6,2,2e-20,2.3,K.num_species)
 
 
 
-grain_reacs, grain_spec = g.output()
+#grain_reacs, grain_spec = g.output()
 
-print(grain_reacs)
-print(grain_spec)
+#print(grain_reacs)
+#print(grain_spec)
 
