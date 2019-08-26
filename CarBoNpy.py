@@ -31,7 +31,7 @@ def chemnet(t,y):
 
     f=np.zeros([len(kida_spec.index)]) # Define the rhs array
 
-    f -= 3*y/t
+    #f -= 3*y/t
 
 
     for num in range(len(list(kida_reac.index))):
@@ -46,11 +46,12 @@ def chemnet(t,y):
         gamma=kida_reac.loc[num]['gamma']
         fo=kida_reac.loc[num]['Fo']
 
+
         if num==0:
             print('Still going! t={0}, Temp={1}'.format(t,T))
 
         
-        elif in2!=0 and in2!=99:
+        if in2!=0 and in2!=99:
             f[in1]  -=  m.arrhenius(alpha,beta,gamma,T,fo) * y[in1] * y[in2]
             f[in2]  -=  m.arrhenius(alpha,beta,gamma,T,fo) * y[in1] * y[in2]
             f[out1] +=  m.arrhenius(alpha,beta,gamma,T,fo) * y[in1] * y[in2]
@@ -65,7 +66,7 @@ def chemnet(t,y):
             if np.isnan(out2) == False and out2!=0:
                 f[out2] += m.arrhenius(alpha, beta, gamma, T, fo) * y[in1]
             if np.isnan(out3) == False and out3!=0:
-                f[out3] += m.arrhenius(alpha, beta, gamma, T, fo) * y[in1]           
+                f[out3] += m.arrhenius(alpha, beta, gamma, T, fo) * y[in1]              
     return f
 
 '''
@@ -118,11 +119,15 @@ Import data from the settings file, the KIDA database files and the initial abun
 file_format, species_file, reactions_file, output_file, model_type, density, temperature, start_time, end_time, outfile = d.settings()
 
 
-Kida_file = cip.Kida(r"data\kida_reac_C_O_Si_only.dat", r"data\kida_spec_C_O_Si_only.dat")
+Kida_file = cip.Kida("data/kida_reac_C_O_Si_only.dat", "data/kida_spec_C_O_Si_only.dat")
 Kida_file.read_species()
 Kida_file.read_reactions()
 
 kida_reac, kida_spec, spec_dict = Kida_file.output() 
+print(kida_reac)
+print(kida_spec)
+print(spec_dict)
+
 
 abund_df = d.abundances(spec_dict)
 
@@ -132,8 +137,6 @@ Initialize the variables
 
 yinit = np.zeros([len(kida_spec.index)])     
 yinit[abund_df.Species.values] = abund_df.Abundance.values 
-
-print(yinit)
 
 Ndensinit = density #np.sum(yinit)*density
 
@@ -162,26 +165,26 @@ t,y=sim.simulate(end_time)
 #sim.plot()
 
 t = np.array(t)/86400
-plt.ylim([1e-10,2e10])
+plt.ylim([1e5,2e10])
 plt.semilogy(t,y[:,1],label='C')
 plt.semilogy(t,y[:,2],label='O')
 plt.semilogy(t,y[:,3],label='C2')
 plt.semilogy(t,y[:,4],label='CO')
-plt.semilogy(t,y[:,5],label='C3')
-plt.semilogy(t,y[:,6],label='C4')
+#plt.semilogy(t,y[:,5],label='C3')
+#plt.semilogy(t,y[:,6],label='C4')
 plt.semilogy(t,y[:,7],label='Si')
 plt.semilogy(t,y[:,8],label='SiC')
 plt.semilogy(t,y[:,9],label='SiO')
-plt.semilogy(t,y[:,10],label='Si2O2')
-plt.semilogy(t,y[:,11], "-.",label='Si2C2')
-plt.semilogy(t,y[:,12], "-.",label='O2')
-plt.semilogy(t,y[:,13], "-.",label='C+')
-plt.semilogy(t,y[:,14], "-.",label='O+')
-plt.semilogy(t,y[:,15], "-.",label='Si+')
-plt.semilogy(t,y[:,16], "-.",label='CO+')
-plt.semilogy(t,y[:,17], "-.",label='C2+')
-plt.semilogy(t,y[:,18], "-.",label='SiC+')
-plt.semilogy(t,y[:,19], "-.",label='e-')
+#plt.semilogy(t,y[:,10],label='Si2O2')
+#plt.semilogy(t,y[:,11], "-.",label='Si2C2')
+#plt.semilogy(t,y[:,12], "-.",label='O2')
+#plt.semilogy(t,y[:,13], "-.",label='C+')
+#plt.semilogy(t,y[:,14], "-.",label='O+')
+#plt.semilogy(t,y[:,15], "-.",label='Si+')
+#plt.semilogy(t,y[:,16], "-.",label='CO+')
+#plt.semilogy(t,y[:,17], "-.",label='C2+')
+#plt.semilogy(t,y[:,18], "-.",label='SiC+')
+#plt.semilogy(t,y[:,19], "-.",label='e-')
 
 
 plt.legend()
