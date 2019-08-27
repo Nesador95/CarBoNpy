@@ -61,8 +61,7 @@ def constantD(t,dens,T0 = 1.8e+4,gamma = 1.593, t0 = 100):
     '''
     t /= 86400
 
-    T=T0 * (t / t0) ** (3 - 3 * gamma)
-    print(t,T)
+    T=T0 #* (t / t0) ** (3 - 3 * gamma)
     ndens = dens
     return T,ndens
 
